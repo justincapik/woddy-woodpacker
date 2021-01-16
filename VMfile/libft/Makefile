@@ -6,7 +6,7 @@
 #    By: kemartin <kemartin@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2019/07/18 15:47:39 by kemartin          #+#    #+#              #
-#    Updated: 2019/07/18 15:47:43 by kemartin         ###   ########.fr        #
+#    Updated: 2021/01/16 10:26:54 by pharatyk         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -102,10 +102,6 @@ CFLAGS = -I ./includes/
 SRCS = $(addprefix $(SRC_DIR), $(SRC_NAME))
 OBJ = $(addprefix $(OBJ_DIR), $(SRC_NAME:.c=.o))
 
-CURR_NBR = 0
-NBR_SRCS = 82
-COLS=$(shell tput cols)
-
 ####################_OPTIONS_########################
 DINO=0
 STYLE=1
@@ -113,22 +109,28 @@ CLEANSONORE=0
 #####################################################
 
 $(NAME): $(OBJ)
-
 	@ar rcs $(NAME) $(OBJ)
+	@printf "]\nlibft  [done]\n"
 
 all: $(NAME)
 
 clean:
+	@printf "clean  [done]\n"
 	@rm -f $(OBJ)
 
 fclean: clean
+	@printf "fclean [done]\n"
 	@rm -f $(NAME)
 
 re: fclean all
 
 $(OBJ_DIR)%.o : $(SRC_DIR)%.c
+	@if [ $(DINO) -eq 0 ] ; then \
+	printf "[" ; \
+	$(eval DINO=$(shell echo "$(DINO) + 1" | bc)) \
+	fi ;
 	@mkdir -p $(OBJ_DIR)
-
+	@printf ">"
 	@$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
 
 .PHONY: all clean fclean re
