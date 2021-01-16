@@ -1,4 +1,3 @@
-#include "elf.h"
 #include "wwp.h"
 
 static int		error(char *whut)
