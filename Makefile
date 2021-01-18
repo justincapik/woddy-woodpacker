@@ -6,7 +6,7 @@
 #    By: apsaint- <apsaint-@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2018/11/06 16:34:32 by pharatyk          #+#    #+#              #
-#    Updated: 2021/01/16 12:02:25 by pharatyk         ###   ########.fr        #
+#    Updated: 2021/01/17 14:31:03 by jucapik          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,7 +15,9 @@ NAME = 			woody_woodpacker
 OBJ_DIR  =		./obj/
 
 SRC_WWP_DIR =	./src/
-SRC_WWP = 		main.c
+SRC_WWP = 		main.c\
+				write.c \
+				core.c
 
 SRCS  =	$(addprefix $(SRC_WWP_DIR), $(SRC_WWP))
 
