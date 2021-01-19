@@ -6,32 +6,26 @@ static int			error(char *whut)
 	return (1);
 }
 
-static t_file_data	*processing(char *ptr, off_t size)
+static int	*processing(char *ptr, off_t size)
 {
 	unsigned int	magic_number;
 	unsigned int	elf_magic_number;
-	t_file_data		*file_info;
 
 	magic_number = *(int *)ptr;
 	elf_magic_number = ELFMAG3 << 24 | ELFMAG2 << 16 | ELFMAG1 << 8 | ELFMAG0;
 	if (magic_number ==  elf_magic_number)
 	{
-		file_info = (t_file_data *)malloc(sizeof(t_file_data));
-		file_info->ptr = ptr;
-		file_info->header = (Elf64_Ehdr *)ptr;
-		printf("entry point => %x\n", u16s(file_info->header->e_entry));
-		file_info->sections = (void *)(ptr + u16s(file_info->header->e_shoff));
-		if (write_woody(file_info, size))
-			return (NULL);
+		if (write_woody(ptr, size))
+			return (0);
 		// change file_info
 		// write to other file
 		
-		return (file_info);
+		return (0);
 	}
 	else
 	{
-		error("not recognized as a valid object file_info\n");
-		return (NULL);
+		error("not recognized as a valid object\n");
+		return (0);
 	}
 }
 
@@ -40,7 +34,6 @@ static int			file_checker(char *file)
 	int			fd;
 	char		*ptr;
 	struct stat	buf;
-	t_file_data	*file_info;
 
 	if ((fd = open(file, O_RDONLY)) < 0)
 		return (error("open failed\n"));
@@ -54,7 +47,7 @@ static int			file_checker(char *file)
 	if ((ptr = mmap(0, buf.st_size, PROT_READ, MAP_PRIVATE, fd, 0))
 		== MAP_FAILED)
 		return (error("mmap failed\n"));
-	if ((file_info = processing(ptr, buf.st_size)) == NULL)
+	if (processing(ptr, buf.st_size))
 		return (1);
 	if (munmap(ptr, buf.st_size) < 0)
 		return (error("munmap failed\n"));

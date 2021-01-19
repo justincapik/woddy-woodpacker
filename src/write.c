@@ -1,39 +1,25 @@
 #include "wwp.h"
 
-int			write_woody(t_file_data *file_info, off_t size)
+int			write_woody(char *ptr, off_t size)
 {
-	int			fd;
-	Elf64_Shdr	*section;
+	(void)size;
 
-	if ((fd = open("./woody", O_CREAT | O_WRONLY)) == -1)
-		return (1);
-	if (file_info->header->e_shstrndx != SHN_UNDEF)
-		printf("well the section's there, it's %d\n",
-				file_info->header->e_shstrndx);
-	else
-		printf("well.\n");
+	Elf64_Ehdr	*ehdr = (Elf64_Ehdr*)ptr;
+	Elf64_Shdr	*shdr = (Elf64_Shdr *)(ptr + ehdr->e_shoff);
+	int shnum = ehdr->e_shnum;
 
-	section = (Elf64_Shdr*)file_info->header->e_shoff;
-	printf("so there's either %d or %d sections\n",
-			u16s(file_info->header->e_shnum),
-			file_info->header->e_shnum);
-	
-	for(int i = 0xffff; i < file_info->header->e_shnum; ++i)
+	printf("entry point => %llx\n", ehdr->e_entry);
+	Elf64_Shdr *sh_strtab = &shdr[ehdr->e_shstrndx];
+	const char *const sh_strtab_p = ptr + sh_strtab->sh_offset;
+	printf("shnum -> [%d]\n", shnum);
+	Elf64_Phdr	*phdr = (Elf64_Phdr*)(ptr + ehdr->e_phoff);
+
+    printf("\n [00]: <  virtual addr  > <  physical addr > \"name\"\n");
+
+	for (int i = 0; i < shnum; ++i)
 	{
-		printf("---------------%d--------------\n", i);
-		printf("section true addr	-> %p\n", (section + i));
-		printf("section told addr	-> 0x%llX\n", (section + i)->sh_addr);
-		printf("section offset		-> 0x%llx\n", (section + i)->sh_offset);
-		printf("section size		-> 0x%llx\n", (section + i)->sh_size);
-		printf("section link		-> 0x%X\n", (section + i)->sh_link);
-		printf("section entry size	-> 0x%llX\n", (section + i)->sh_entsize);
-
-		//section = (void*)(file_info->ptr + file_info->header->e_shentsize);
+    	printf("[%2d]: <%16llx> <%16llx> \"%s\"\n", i, phdr[i].p_vaddr, phdr[i].p_paddr, sh_strtab_p + shdr[i].sh_name);
 	}
 
-
-
-	if (file_info == NULL || size == 0)
-		return (1);
-	return (0);
+	return 0;
 }
