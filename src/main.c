@@ -44,7 +44,7 @@ static int			file_checker(char *file)
 		ft_printfd(2, "%s is a directory\n", file);
 		return (1);
 	}
-	if ((ptr = mmap(0, buf.st_size, PROT_READ, MAP_PRIVATE, fd, 0))
+	if ((ptr = mmap(0, buf.st_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE, fd, 0))
 		== MAP_FAILED)
 		return (error("mmap failed\n"));
 	if (processing(ptr, buf.st_size))
