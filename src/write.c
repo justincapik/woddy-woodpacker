@@ -27,6 +27,12 @@ int			write_woody(char *ptr, off_t size)
 	}
 	printf("vrai <%16llx> notre <%16llx> \n", (unsigned long long int)(ptr + ehdr->e_phoff), (unsigned long long int)(ptr + shdr[25].sh_addr + shdr[25].sh_size));
 
-
+	int fd;
+	if ((fd = open("woody", O_WRONLY | O_APPEND | O_CREAT, 0644)) == -1)
+		return (1);
+	printf("===>%c<===\n", ptr[0x2009]);
+	ptr[0x2008] = 'e';
+	write(fd, ptr, size);
+	// waaa c'est a 2008
 	return 0;
 }
