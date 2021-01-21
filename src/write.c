@@ -133,6 +133,7 @@ int			write_woody(char *ptr, off_t size)
 	phdr[ptr_begin_text_origin].p_filesz += shdr2[ptr_begin_text].sh_size;
 	phdr[ptr_begin_text_origin].p_memsz += shdr2[ptr_begin_text].sh_size;
 
+	// shdr[15].sh_size += shdr2[ptr_begin_text].sh_size;
 
 	ft_memmove(ptr + 0x11db, "lol", 3);
 	ft_memmove(ptr + end_text_addr, asmptr + shdr2[ptr_begin_text].sh_offset, shdr2[ptr_begin_text].sh_size);
