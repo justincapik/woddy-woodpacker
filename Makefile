@@ -6,15 +6,15 @@
 #    By: apsaint- <apsaint-@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2018/11/06 16:34:32 by pharatyk          #+#    #+#              #
-#    Updated: 2021/01/21 15:27:58 by pharatyk         ###   ########.fr        #
+#    Updated: 2021/01/22 11:04:14 by pharatyk         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = 			woody_woodpacker
-ASM_NAME = 			payload
+ASM_NAME = 		payload
 
 OBJ_DIR  =		./obj/C/
-ASM_OBJ_DIR  =		./obj/ASM/
+ASM_OBJ_DIR  =	./obj/ASM/
 
 SRC_WWP_DIR =	./src/
 SRC_WWP = 		main.c\
@@ -72,7 +72,7 @@ $(OBJ_DIR)%.o: $(SRC_WWP_DIR)%.c
 $(ASM_OBJ_DIR)%.o: $(SRC_ASM_DIR)%.asm
 	@mkdir -p $(ASM_OBJ_DIR)
 	@printf ">"
-	@nasm -f elf64 $< -o $@
+	@nasm -f elf64 -g $< -o $@
 re: fclean all
 
 .PHONY: all clean fclean re lib $(NAME)

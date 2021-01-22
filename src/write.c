@@ -1,5 +1,28 @@
 #include "wwp.h"
 
+// int
+// my_elfi_mem_subst (void *m, int len, long pat, long val)
+// {
+//   unsigned char *p = (unsigned char*)m;
+//   long v;
+//   int i, r;
+
+//   for (i = 0; i < len; i++)
+//     {
+//       v = *((long*)(p+i));
+//       r = v ^pat;
+
+//       if (r ==0) 
+// 	{
+// 	  printf ("+ Pattern %lx found at offset %d -> %lx\n", pat, i, val);
+// 	  *((long*)(p+i)) = val;
+// 	  return 0;
+// 	}
+//     }
+//   return -1;
+// }
+
+
 int			write_woody(char *ptr, off_t size)
 {
 	(void)size;
@@ -52,6 +75,7 @@ int			write_woody(char *ptr, off_t size)
 			printf("text found -> %d\n", i);
 			ptr_begin_text_origin = i;
 			segaddr = &phdr[i];
+			// end_text_addr = phdr[i].p_vaddr + phdr[i].p_memsz;
 			end_text_addr = phdr[i].p_offset + phdr[i].p_filesz;
 			printf("off %llx size %llx\n", phdr[i].p_offset, phdr[i].p_filesz);
 		}
@@ -127,8 +151,16 @@ int			write_woody(char *ptr, off_t size)
 	printf("addr -> {%p}\n", asmptr + shdr2[ptr_begin_text].sh_addr);
 	printf("addr -> {%p}\n", &shdr2[ptr_begin_text]);
 	
+	u_int64_t old_one = ((phdr[ptr_begin_text_origin].p_vaddr + phdr[ptr_begin_text_origin].p_memsz - ehdr->e_entry) * (-1));
+	ft_memcpy(asmptr + 0x1019, &old_one, 8);
+
 	// ft_memcpy(asmptr + 0x1019, &ehdr->e_entry, 8);
+  	// my_elfi_mem_subst (ptr + end_text_addr, shdr2[ptr_begin_text].sh_size, 0x11111111, (long)ehdr->e_entry);
+
+	printf("old entry point => %llx\n", ehdr->e_entry);
+	printf("his old entry point => %llx\n", (phdr[ptr_begin_text_origin].p_vaddr + phdr[ptr_begin_text_origin].p_memsz - ehdr->e_entry) * (-1));
 	ehdr->e_entry = (Elf64_Addr)(end_text_addr);
+	printf("new entry point => %llx\n", ehdr->e_entry);
 
 	phdr[ptr_begin_text_origin].p_filesz += shdr2[ptr_begin_text].sh_size;
 	phdr[ptr_begin_text_origin].p_memsz += shdr2[ptr_begin_text].sh_size;
