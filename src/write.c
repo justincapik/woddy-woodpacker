@@ -1,27 +1,6 @@
 #include "wwp.h"
-
-// int
-// my_elfi_mem_subst (void *m, int len, long pat, long val)
-// {
-//   unsigned char *p = (unsigned char*)m;
-//   long v;
-//   int i, r;
-
-//   for (i = 0; i < len; i++)
-//     {
-//       v = *((long*)(p+i));
-//       r = v ^pat;
-
-//       if (r ==0) 
-// 	{
-// 	  printf ("+ Pattern %lx found at offset %d -> %lx\n", pat, i, val);
-// 	  *((long*)(p+i)) = val;
-// 	  return 0;
-// 	}
-//     }
-//   return -1;
-// }
-
+void lafonction(void);
+extern u_int32_t lasize;
 
 int			write_woody(char *ptr, off_t size)
 {
@@ -91,49 +70,49 @@ int			write_woody(char *ptr, off_t size)
     // #########################################################################################################################################
 	
 
-	int			nfd;
-	struct stat	buf2;
-	char		*asmptr;
+	// int			nfd;
+	// struct stat	buf2;
+	// char		*asmptr;
 
 
-	if ((nfd = open("payload", O_RDONLY)) < 0)
-		return (1);
-	if (fstat(nfd, &buf2) < 0)
-		return (1);
-	if (S_ISDIR(buf2.st_mode))
-	{
-		ft_printfd(2, "%s is a directory\n", "payload");
-		return (1);
-	}
-	if ((asmptr = mmap(0, buf2.st_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE, nfd, 0))
-		== MAP_FAILED)
-		return (1);
+	// if ((nfd = open("payload", O_RDONLY)) < 0)
+	// 	return (1);
+	// if (fstat(nfd, &buf2) < 0)
+	// 	return (1);
+	// if (S_ISDIR(buf2.st_mode))
+	// {
+	// 	ft_printfd(2, "%s is a directory\n", "payload");
+	// 	return (1);
+	// }
+	// if ((asmptr = mmap(0, buf2.st_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE, nfd, 0))
+	// 	== MAP_FAILED)
+	// 	return (1);
 
     // #########################################################################################################################################
     // #########################################################################################################################################
-    // #########################################################################################################################################
+ //    // #########################################################################################################################################
 	
-	Elf64_Ehdr	*ehdr2 = (Elf64_Ehdr*)asmptr;
-	Elf64_Shdr	*shdr2 = (Elf64_Shdr *)(asmptr + ehdr2->e_shoff);
+	// Elf64_Ehdr	*ehdr2 = (Elf64_Ehdr*)asmptr;
+	// Elf64_Shdr	*shdr2 = (Elf64_Shdr *)(asmptr + ehdr2->e_shoff);
 
-	Elf64_Shdr *sh_strtab2 = &shdr2[ehdr2->e_shstrndx];
-	const char *const sh_strtab_p2 = asmptr + sh_strtab2->sh_offset;
+	// Elf64_Shdr *sh_strtab2 = &shdr2[ehdr2->e_shstrndx];
+	// const char *const sh_strtab_p2 = asmptr + sh_strtab2->sh_offset;
 
-	printf("\nle mechant\n");
-	int ptr_begin_text;
-	for (int i = 0; i < shnum; ++i)
-	{
-    	// printf("[%2d]: <%16x> <%16x> \"%s\"\n", i, u16s(phdr2[i].p_vaddr), u16s(phdr2[i].p_paddr), sh_strtab_p2 + shdr2[i].sh_name);
-    	printf("[%2d]:  <%016llx> <%08llx> \"%s\"\n", i, shdr2[i].sh_addr, shdr2[i].sh_size, sh_strtab_p2 + shdr2[i].sh_name);
-		if (!ft_strcmp((char*)(sh_strtab_p2 + shdr2[i].sh_name), ".text"))
-		{
-			ptr_begin_text = i;
-			printf("found .text -> [%2d] addr <%016llx>\n", i, shdr2[i].sh_addr);
-		}
-	}
-	printf("evidemment\n");
-	(void)ptr_begin_text;
-	printf("voila\n");
+	// printf("\nle mechant\n");
+	// int ptr_begin_text;
+	// for (int i = 0; i < shnum; ++i)
+	// {
+ //    	// printf("[%2d]: <%16x> <%16x> \"%s\"\n", i, u16s(phdr2[i].p_vaddr), u16s(phdr2[i].p_paddr), sh_strtab_p2 + shdr2[i].sh_name);
+ //    	printf("[%2d]:  <%016llx> <%08llx> \"%s\"\n", i, shdr2[i].sh_addr, shdr2[i].sh_size, sh_strtab_p2 + shdr2[i].sh_name);
+	// 	if (!ft_strcmp((char*)(sh_strtab_p2 + shdr2[i].sh_name), ".text"))
+	// 	{
+	// 		ptr_begin_text = i;
+	// 		printf("found .text -> [%2d] addr <%016llx>\n", i, shdr2[i].sh_addr);
+	// 	}
+	// }
+	// printf("evidemment\n");
+	// (void)ptr_begin_text;
+	// printf("voila\n");
 
     // #########################################################################################################################################
     // #########################################################################################################################################
@@ -147,6 +126,7 @@ int			write_woody(char *ptr, off_t size)
     // #########################################################################################################################################
     // #########################################################################################################################################
 
+/*
 	printf("addr -> {%016llx}\n", shdr2[ptr_begin_text].sh_addr);
 	printf("addr -> {%p}\n", asmptr + shdr2[ptr_begin_text].sh_addr);
 	printf("addr -> {%p}\n", &shdr2[ptr_begin_text]);
@@ -171,16 +151,30 @@ int			write_woody(char *ptr, off_t size)
 	ft_memmove(ptr + end_text_addr, asmptr + shdr2[ptr_begin_text].sh_offset, shdr2[ptr_begin_text].sh_size);
 	ft_memcpy(ptr + 0x2008, "Joie ", 5);
 
+*/
+    // #########################################################################################################################################
+    // #########################################################################################################################################
+    // #########################################################################################################################################
+
+	ehdr->e_entry = (Elf64_Addr)(end_text_addr);
+	phdr[ptr_begin_text_origin].p_filesz += lasize;
+	phdr[ptr_begin_text_origin].p_memsz += lasize;
+	shdr[15].sh_size += lasize;
+	// write(fd, ptr, size);
+	write(fd, ptr, end_text_addr);
+	write(fd, &lafonction, lasize);
+	// write(fd, "lol", 3);
+	write(fd, ptr + end_text_addr + 3, (size - end_text_addr - lasize));
+
+
 
     // #########################################################################################################################################
     // #########################################################################################################################################
     // #########################################################################################################################################
 
-	write(fd, ptr, size);
-
-	if (munmap(asmptr, buf2.st_size) < 0)
-		return (1);
-	close(nfd);
+	// if (munmap(asmptr, buf2.st_size) < 0)
+	// 	return (1);
+	// close(nfd);
 	close(fd);
 	return 0;
 }

@@ -6,7 +6,7 @@
 #    By: apsaint- <apsaint-@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2018/11/06 16:34:32 by pharatyk          #+#    #+#              #
-#    Updated: 2021/01/22 11:04:14 by pharatyk         ###   ########.fr        #
+#    Updated: 2021/01/25 10:44:56 by pharatyk         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -41,11 +41,11 @@ CLEANSONORE=1
 
 all: $(NAME)
 
-$(ASM_NAME): $(ASM_OBJ)
-	@ld -o $(ASM_NAME) $(ASM_OBJ)
+# $(ASM_NAME): $(ASM_OBJ)
+# 	@ld -o $(ASM_NAME) $(ASM_OBJ)
 
-$(NAME): lib $(OBJ) $(ASM_NAME)
-	@$(CC) -o $(NAME) $(OBJ) libft/libft.a
+$(NAME): lib $(OBJ) $(ASM_OBJ)
+	@$(CC) -o $(NAME) $(OBJ) $(ASM_OBJ) libft/libft.a
 	@printf " _/\nwoody  [done]\n"
 
 lib:
@@ -75,5 +75,5 @@ $(ASM_OBJ_DIR)%.o: $(SRC_ASM_DIR)%.asm
 	@nasm -f elf64 -g $< -o $@
 re: fclean all
 
-.PHONY: all clean fclean re lib $(NAME)
+.PHONY: all clean fclean re lib $(NAME) $(ASM_NAME)
 
