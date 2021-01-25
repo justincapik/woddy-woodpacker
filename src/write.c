@@ -161,10 +161,10 @@ int			write_woody(char *ptr, off_t size)
 	// ft_memmove(asmptr + 0x25d, &ehdr->e_entry, 8);
 
 	printf("%p <=> %llx\n", &ehdr->e_entry, ehdr->e_entry);
-	// ehdr->e_entry = (Elf64_Addr)(end_text_addr);
-	// phdr[ptr_begin_text_origin].p_filesz += lasize;
-	// phdr[ptr_begin_text_origin].p_memsz += lasize;
-	// shdr[15].sh_size += lasize;
+	ehdr->e_entry = (Elf64_Addr)(end_text_addr);
+	phdr[ptr_begin_text_origin].p_filesz += lasize;
+	phdr[ptr_begin_text_origin].p_memsz += lasize;
+	shdr[15].sh_size += lasize;
 
 
 	// write(fd, ptr, size);
