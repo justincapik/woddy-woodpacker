@@ -75,13 +75,13 @@ int			write_woody(char *ptr, off_t size)
 	// char		*asmptr;
 
 
-	// if ((nfd = open("payload", O_RDONLY)) < 0)
+	// if ((nfd = open("obj/ASM/payload.o", O_RDONLY)) < 0)
 	// 	return (1);
 	// if (fstat(nfd, &buf2) < 0)
 	// 	return (1);
 	// if (S_ISDIR(buf2.st_mode))
 	// {
-	// 	ft_printfd(2, "%s is a directory\n", "payload");
+	// 	ft_printfd(2, "%s is a directory\n", "obj/ASM/payload.o");
 	// 	return (1);
 	// }
 	// if ((asmptr = mmap(0, buf2.st_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE, nfd, 0))
@@ -156,15 +156,22 @@ int			write_woody(char *ptr, off_t size)
     // #########################################################################################################################################
     // #########################################################################################################################################
 
-	ehdr->e_entry = (Elf64_Addr)(end_text_addr);
-	phdr[ptr_begin_text_origin].p_filesz += lasize;
-	phdr[ptr_begin_text_origin].p_memsz += lasize;
-	shdr[15].sh_size += lasize;
+	printf("%d\n", ptr_begin_text_origin);
+
+	// ft_memmove(asmptr + 0x25d, &ehdr->e_entry, 8);
+
+	printf("%p <=> %llx\n", &ehdr->e_entry, ehdr->e_entry);
+	// ehdr->e_entry = (Elf64_Addr)(end_text_addr);
+	// phdr[ptr_begin_text_origin].p_filesz += lasize;
+	// phdr[ptr_begin_text_origin].p_memsz += lasize;
+	// shdr[15].sh_size += lasize;
+
+
 	// write(fd, ptr, size);
 	write(fd, ptr, end_text_addr);
 	write(fd, &lafonction, lasize);
 	// write(fd, "lol", 3);
-	write(fd, ptr + end_text_addr + 3, (size - end_text_addr - lasize));
+	write(fd, ptr + end_text_addr + lasize, (size - end_text_addr - lasize));
 
 
 
