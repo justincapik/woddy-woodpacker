@@ -151,8 +151,8 @@ int			write_woody(char *ptr, off_t size)
 	printf("addr -> {%p}\n", asmptr + shdr2[ptr_begin_text].sh_addr);
 	printf("addr -> {%p}\n", &shdr2[ptr_begin_text]);
 	
-	u_int64_t old_one = ((phdr[ptr_begin_text_origin].p_vaddr + phdr[ptr_begin_text_origin].p_memsz - ehdr->e_entry) * (-1));
-	ft_memcpy(asmptr + 0x1019, &old_one, 8);
+	// u_int64_t old_one = ((phdr[ptr_begin_text_origin].p_vaddr + phdr[ptr_begin_text_origin].p_memsz - ehdr->e_entry) * (-1));
+	// ft_memcpy(asmptr + 0x1019, &old_one, 8);
 
 	// ft_memcpy(asmptr + 0x1019, &ehdr->e_entry, 8);
   	// my_elfi_mem_subst (ptr + end_text_addr, shdr2[ptr_begin_text].sh_size, 0x11111111, (long)ehdr->e_entry);

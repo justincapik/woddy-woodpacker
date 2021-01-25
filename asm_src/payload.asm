@@ -29,8 +29,8 @@ _start:
         mov rdx, msg_end - msg      ; msg size
         syscall         ; calls the function stored in rax
 
-	mov rax, 0x11111111
-	jmp rax
+        mov rax, 0x555555555050
+        jmp rax
 
         mov rax,60      ; [60] - sys_exit
         mov rdi,42       ; exit with code rdx(0)
@@ -38,4 +38,4 @@ _start:
 
 align 8
         msg     db 'This file has been infected for 0x00SEC',0x0a,0
-	msg_end db 0x0
+        msg_end db 0x0
