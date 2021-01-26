@@ -167,9 +167,9 @@ int			write_woody(char *ptr, off_t size)
 
 	// shdr[15].sh_size += shdr2[ptr_begin_text].sh_size;
 
-	ft_memmove(ptr + 0x11db, "lol", 3);
+	// ft_memmove(ptr + 0x11db, "lol", 3);
 	ft_memmove(ptr + end_text_addr, asmptr + shdr2[ptr_begin_text].sh_offset, shdr2[ptr_begin_text].sh_size);
-	ft_memcpy(ptr + 0x2008, "Joie ", 5);
+	// ft_memcpy(ptr + 0x2008, "Joie ", 5);
 
 
     // #########################################################################################################################################
