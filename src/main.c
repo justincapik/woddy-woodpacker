@@ -6,7 +6,7 @@ static int			error(char *whut)
 	return (1);
 }
 
-static int	*processing(char *ptr, off_t size)
+static int	*processing(char *ptr, off_t size, char* filename)
 {
 	unsigned int	magic_number;
 	unsigned int	elf_magic_number;
@@ -15,10 +15,10 @@ static int	*processing(char *ptr, off_t size)
 	elf_magic_number = ELFMAG3 << 24 | ELFMAG2 << 16 | ELFMAG1 << 8 | ELFMAG0;
 	if (magic_number ==  elf_magic_number)
 	{
-		if (write_woody(ptr, size))
+		if (write_woody(ptr, size, filename))
 			return (0);
 		// change file_info
-		// write to other file
+		// write to other filemame
 		
 		return (0);
 	}
@@ -29,25 +29,25 @@ static int	*processing(char *ptr, off_t size)
 	}
 }
 
-static int			file_checker(char *file)
+static int			file_checker(char *filemame)
 {
 	int			fd;
 	char		*ptr;
 	struct stat	buf;
 
-	if ((fd = open(file, O_RDONLY)) < 0)
+	if ((fd = open(filemame, O_RDONLY)) < 0)
 		return (error("open failed\n"));
 	if (fstat(fd, &buf) < 0)
 		return (error("fstat failed\n"));
 	if (S_ISDIR(buf.st_mode))
 	{
-		ft_printfd(2, "%s is a directory\n", file);
+		ft_printfd(2, "%s is a directory\n", filemame);
 		return (1);
 	}
 	if ((ptr = mmap(0, buf.st_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE, fd, 0))
 		== MAP_FAILED)
 		return (error("mmap failed\n"));
-	if (processing(ptr, buf.st_size))
+	if (processing(ptr, buf.st_size, filemame))
 		return (1);
 	if (munmap(ptr, buf.st_size) < 0)
 		return (error("munmap failed\n"));

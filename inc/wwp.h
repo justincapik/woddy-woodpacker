@@ -20,7 +20,7 @@ typedef struct	s_file_data
 	Elf64_Shdr	*sections;
 }				t_file_data;
 
-int				write_woody(char *ptr, off_t size);
+int				write_woody(char *ptr, off_t size, char *filename);
 u_int64_t		u64s(u_int64_t n);
 u_int32_t		u32s(u_int32_t n);
 u_int16_t		u16s(u_int16_t n);

