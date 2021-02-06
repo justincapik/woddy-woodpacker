@@ -297,6 +297,7 @@ int			write_woody(char *ptr, off_t size)
 		//printf("%d ", i);
 		filestring[i] ^= key[i % keysize];
 	}
+	//RAA
 	//POUR L'INSTANT ENCRIPTE TOUT L'EXECUTABLE "encrypted" a partir d'une copie de woody
 	//for (int i = host_header->e_entry  + parasite_size; i < size; i++)
         //	filestring[i] ^= key[i % keysize];
