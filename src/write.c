@@ -277,6 +277,37 @@ int			write_woody(char *ptr, off_t size)
 	close(fd);
 
 
+	char	encryptedName[] = "encrypted";
+	char	key[] = "pasta";
+	int	enfd;
+	char	*filestring = (char *)malloc(size);
+	ft_memmove(filestring, ptr, size);
+	if ((enfd = open(encryptedName, O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1)
+	{
+		fprintf(stderr, "couldn't make encryption file\n");
+		return (1);
+	}
+
+	int keysize = ft_strlen(key);
+	char a = 'a', b = ' ';
+	printf("%c (0x%x) ^ %c (0x%x) => %c (0x%x)\n", a, (int)a, b, (int)b, a ^ b, (int)(a ^ b));
+	printf("e_entry = %d, parasite size = %d, file size = %d\n", host_header->e_entry, parasite_size, size);
+	for (int i = 0; i < size; i++)
+	{
+		//printf("%d ", i);
+		filestring[i] ^= key[i % keysize];
+	}
+	//POUR L'INSTANT ENCRIPTE TOUT L'EXECUTABLE "encrypted" a partir d'une copie de woody
+	//for (int i = host_header->e_entry  + parasite_size; i < size; i++)
+        //	filestring[i] ^= key[i % keysize];
+
+
+	write(enfd, filestring, size);
+	close(enfd);
+	free(filestring);
+	printf("key: %s\n", key);
+
+
 	// DEBUG
 	// fprintf(stdout, BLUE"[+]"RED" Infected x_x"RESET"  :  "GREEN"%s\n"RESET, filepath);
 
