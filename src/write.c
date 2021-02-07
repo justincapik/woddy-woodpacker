@@ -37,12 +37,58 @@
 
 */
 
+Elf64_Off		textoff;						// offset of .text segment
 Elf64_Addr		parasite_load_address;			// parasite entry point (if parasite is LSB EXEC)
 Elf64_Off		parasite_offset;				// Parasite entry point (if parasite is .so)
 u_int64_t		parasite_size;					
 int8_t			*parasite_code;					// Parasite residence (in memory before meeting its host )
 
 Elf64_Off		text_segment_end_offset;		// Location to inject parasite
+
+// generator for a 16bit long printable ascii char*
+char    *key_generator()
+{
+    int             fdrandom;
+    int             i;
+    char            key[16];
+    char            *retkey;
+
+    // opening urandom to avoid gettig the same output at each exec
+    // getting a 16 char long key
+    fdrandom = open("/dev/urandom", O_RDONLY);
+    if (!fdrandom)
+    {
+    	perror(RED"key_generator, open"RESET);
+		exit(0x61);
+    }
+    read(fdrandom, &key, 16);
+    close(fdrandom);
+
+    // changing the random number for a printable ascii char
+    i = -1;
+    while (++i < 16)
+    {
+        if (key[i] < 0)
+        	key[i] *= -1;
+        key[i] = ((key[i] % (125 - 32)) + 33);
+    }
+    key[15] = 0;
+
+    // transfering the key to a malloc version
+    if (!(retkey = (char*)malloc(sizeof(char) * 16)))
+    {
+    	perror(RED"key_generator, malloc"RESET);
+		exit(0x61);
+    }
+    i = -1;
+    while(++i < 16)
+    {
+    	retkey[i] = key[i];
+    	printf("%d : %d\n", i, retkey[i]);
+    }
+    printf(YELLOW"key_value : ["RED"%s"YELLOW"]\n"RESET, retkey);
+    return (retkey);
+}
 
 // Finds the placeholder (for address where our parasite code will jump after executing its body) and
 // writes the host's entry point (original entry point address) to it.
@@ -110,6 +156,9 @@ Elf64_Off PaddingSizeFinder(void *host_mapping)
 
 			TEXT_SEGMENT_FOUND = 1;
 
+			// get the offset of the .text segment for encryption
+			textoff = phdr[i].p_offset;
+
 			// Calculate the offset where the .text segment ends to bellow calculate padding_size 
 			text_segment_end_offset	= phdr[i].p_offset + phdr[i].p_filesz;
 			parasite_offset			= text_segment_end_offset;
@@ -175,6 +224,30 @@ void ParasiteLoader(char *parasite_path)
 	close(parasite_fd);
 }
 
+int			encryptor(char *ptr, off_t size, Elf64_Addr textend)
+{
+	char	encryptedName[] = "encrypted";
+	char *key;
+	key = key_generator();
+
+	int		enfd;
+	if ((enfd = open(encryptedName, O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1)
+	{
+		fprintf(stderr, "couldn't make encryption file\n");
+		return (1);
+	}
+
+	printf("begin .text:%x <-> end .text:%x\n", textoff, textend);
+	for (off_t i = textoff; i < textend; i++)
+		ptr[i] ^= key[i % 16];
+
+	write(enfd, ptr, size);
+	close(enfd);
+	free(key);
+
+	return (0);
+}
+
 int			write_woody(char *ptr, off_t size, char *filename)
 {
 	// DEBUG
@@ -233,38 +306,7 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	write(fd, ptr, size);
 	close(fd);
 
-	char	encryptedName[] = "encrypted";
-	char	key[] = "pasta";
-	int	enfd;
-	char	*filestring = (char *)malloc(size);
-	ft_memmove(filestring, ptr, size);
-	if ((enfd = open(encryptedName, O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1)
-	{
-		fprintf(stderr, "couldn't make encryption file\n");
-		return (1);
-	}
-
-	int keysize = ft_strlen(key);
-	char a = 'a', b = ' ';
-	printf("%c (0x%x) ^ %c (0x%x) => %c (0x%x)\n", a, (int)a, b, (int)b, a ^ b, (int)(a ^ b));
-	printf("e_entry = %d, parasite size = %d, file size = %d\n", host_header->e_entry, parasite_size, size);
-	for (int i = 0; i < size; i++)
-	{
-		//printf("%d ", i);
-		filestring[i] ^= key[i % keysize];
-	}
-	//RAA
-	//POUR L'INSTANT ENCRIPTE TOUT L'EXECUTABLE "encrypted" a partir d'une copie de woody
-	//for (int i = host_header->e_entry  + parasite_size; i < size; i++)
-        //	filestring[i] ^= key[i % keysize];
-
-
-	write(enfd, filestring, size);
-	close(enfd);
-	free(filestring);
-	printf("key: %s\n", key);
-
-
+	encryptor(ptr, size, ehdr->e_entry);
 	// DEBUG
 	fprintf(stdout, BLUE"[+]"RED" Infected x_x"RESET"  :  "GREEN"%s\n"RESET, filename);
 
