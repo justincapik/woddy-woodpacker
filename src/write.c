@@ -82,10 +82,7 @@ char    *key_generator()
     }
     i = -1;
     while(++i < 16)
-    {
     	retkey[i] = key[i];
-    	printf("%d : %d\n", i, retkey[i]);
-    }
     printf(YELLOW"key_value : ["RED"%s"YELLOW"]\n"RESET, retkey);
     return (retkey);
 }
