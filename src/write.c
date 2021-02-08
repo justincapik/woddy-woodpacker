@@ -37,13 +37,17 @@
 
 */
 
+int 			encr_bundle_size = 32;					// size of key + addrs
 Elf64_Off		textoff;						// offset of .text segment
+Elf64_Off		textend;						// offset of the end of .text segment
 Elf64_Addr		parasite_load_address;			// parasite entry point (if parasite is LSB EXEC)
 Elf64_Off		parasite_offset;				// Parasite entry point (if parasite is .so)
 u_int64_t		parasite_size;					
+// u_int64_t		keys_size = 32;
+u_int64_t		parasite_full_size;					
 int8_t			*parasite_code;					// Parasite residence (in memory before meeting its host )
-
 Elf64_Off		text_segment_end_offset;		// Location to inject parasite
+char *truekey;
 
 // generator for a 16bit long printable ascii char*
 char    *key_generator()
@@ -124,8 +128,8 @@ void SHT_Patcher(void *ptr)
         if ( text_segment_end_offset == current_section_end_offset)
         {
             // This is the last section of .text Segment
-			// Increase the sizeof this section by a parasite_size to accomodate parasite
-            shdr[i].sh_size = shdr[i].sh_size + parasite_size;
+			// Increase the sizeof this section by a parasite_full_size to accomodate parasite
+            shdr[i].sh_size = shdr[i].sh_size + parasite_full_size;
 			return ;
 		}
     }
@@ -162,9 +166,9 @@ Elf64_Off PaddingSizeFinder(void *host_mapping)
 			parasite_load_address	= phdr[i].p_vaddr  + phdr[i].p_filesz;
 
 
-			// Increase its p_filesz and p_memsz by parasite_size (to accomodate parasite)
-			phdr[i].p_filesz = phdr[i].p_filesz + parasite_size;
-			phdr[i].p_memsz  = phdr[i].p_memsz  + parasite_size;
+			// Increase its p_filesz and p_memsz by parasite_full_size (to accomodate parasite)
+			phdr[i].p_filesz = phdr[i].p_filesz + parasite_full_size;
+			phdr[i].p_memsz  = phdr[i].p_memsz  + parasite_full_size;
 
 			// Make text segment writable
 			phdr[i].p_flags = PF_R | PF_W | PF_X;
@@ -204,6 +208,7 @@ void ParasiteLoader(char *parasite_path)
 
 	// Initializing parasite_size and allocating space for parasite_code
 	parasite_size = buf.st_size;
+	parasite_full_size = parasite_size + encr_bundle_size;
 	if (!(parasite_code = (int8_t *)malloc(parasite_size)))
 	{
 		perror(RED"ParasiteLoader, malloc"RESET);
@@ -221,11 +226,11 @@ void ParasiteLoader(char *parasite_path)
 	close(parasite_fd);
 }
 
-int			encryptor(char *ptr, off_t size, Elf64_Addr textend)
+int			encryptor(char *ptr, off_t size)
 {
 	char	encryptedName[] = "encrypted";
-	char *key;
-	key = key_generator();
+	// char *key;
+	// key = key_generator();
 
 	int		enfd;
 	if ((enfd = open(encryptedName, O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1)
@@ -234,13 +239,14 @@ int			encryptor(char *ptr, off_t size, Elf64_Addr textend)
 		return (1);
 	}
 
-	printf("begin .text:%x <-> end .text:%x\n", textoff, textend);
+	printf(YELLOW"encryption addresss ["RED"%x "YELLOW"<-> "RED"%x"YELLOW"]\n"RESET, textoff, textend);
+	// printf("taille text ->%d || %d\n", sizeof(textoff), sizeof(textend));
 	for (off_t i = textoff; i < textend; i++)
-		ptr[i] ^= key[i % 16];
+		ptr[i] ^= truekey[i % 16];
 
 	write(enfd, ptr, size);
 	close(enfd);
-	free(key);
+	free(truekey);
 
 	return (0);
 }
@@ -272,7 +278,7 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	// Get Home size (in bytes) of parasite residence in host
 	// and check if host's home size can accomodate a parasite this big in size
 	Elf64_Off padding_size = PaddingSizeFinder(ptr);
-	if (padding_size < parasite_size)
+	if (padding_size < parasite_full_size)
 	{
 		fprintf(stderr, RED"[+]"RESET" Host "YELLOW"%s"RESET" cannot accomodate parasite, parasite is angry "RED"x_x \n"RESET, filename); 
 		return 0;
@@ -282,19 +288,29 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	// Save original_entry_point of host and patch host entry point with parasite_offset
 	Elf64_Addr original_entry_point = ehdr->e_entry; 
 	if (HOST_IS_EXECUTABLE)
-		ehdr->e_entry 	= parasite_load_address;
+		ehdr->e_entry 	= parasite_load_address + encr_bundle_size;
 	else
-		ehdr->e_entry 	= parasite_offset;
+		ehdr->e_entry 	= parasite_offset + encr_bundle_size;
 
-
+	textend = ehdr->e_entry - encr_bundle_size;
 	// Patch SHT
 	SHT_Patcher(ptr);
 
 	// Patch Parasite jmp-on-exit address.
 	AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, original_entry_point);
 
+	// call to the key generator (faudra penser a le deplacer)
+	truekey = key_generator();
+
+	// passage d'informations pour le decryptage du format debut encryption/key/fin encryption
+	*((long *)(ptr + parasite_offset)) = textoff;
+	ft_memmove((ptr + parasite_offset + 8), truekey, 16);
+	*((long *)(ptr + parasite_offset + 24)) = textend;
+
+	// printf("%x <-> %x\n", *((long *)(ptr + parasite_offset)), *((long *)(ptr + parasite_offset + 24)));
+
 	// Inject parasite in Host memory
-	ft_memmove( (ptr + parasite_offset), parasite_code, parasite_size);
+	ft_memmove((ptr + parasite_offset + encr_bundle_size), parasite_code, parasite_size);
 
 	//write memory in a new file
 	int fd;
@@ -303,9 +319,10 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	write(fd, ptr, size);
 	close(fd);
 
-	encryptor(ptr, size, ehdr->e_entry);
+	encryptor(ptr, size);
+
 	// DEBUG
-	fprintf(stdout, BLUE"[+]"RED" Infected x_x"RESET"  :  "GREEN"%s\n"RESET, filename);
+	fprintf(stdout, BLUE"<+>"RED" success \\o/"RESET"  :  "GREEN"%s\n"RESET, filename);
 
 	return 0;
 }
