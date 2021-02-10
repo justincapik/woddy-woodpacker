@@ -37,7 +37,7 @@
 
 */
 
-int 			encr_bundle_size = 32;					// size of key + addrs
+int 			encr_bundle_size = 32;			// size of key + addrs
 Elf64_Off		textoff;						// offset of .text segment
 Elf64_Off		textend;						// offset of the end of .text segment
 Elf64_Addr		parasite_load_address;			// parasite entry point (if parasite is LSB EXEC)
