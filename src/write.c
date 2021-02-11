@@ -298,15 +298,16 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	SHT_Patcher(ptr);
 
 	// Patch Parasite jmp-on-exit address.
-	AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, original_entry_point);
+	// AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, original_entry_point);
+	AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, textend - original_entry_point);
 
 	// call to the key generator (faudra penser a le deplacer)
 	truekey = key_generator();
 
 	// passage d'informations pour le decryptage du format debut encryption/key/fin encryption
 	ft_memmove((ptr + parasite_offset), truekey, 16);
-	AddrPatcher(parasite_code, 0x1111111111111111, textoff);
-	AddrPatcher(parasite_code, 0x2222222222222222, textend);
+	// AddrPatcher(parasite_code, 0x1111111111111111, textoff);
+	// AddrPatcher(parasite_code, 0x2222222222222222, textend);
 	// *((long *)(ptr + parasite_offset)) = textoff;
 	// ft_memmove((ptr + parasite_offset + 8), truekey, 16);
 	// *((long *)(ptr + parasite_offset + 24)) = textend;
