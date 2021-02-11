@@ -29,17 +29,18 @@
 5.	Find and replace Parasite jmp exit addresss with original_entry_point 0x????????
 
 
----	Inject Parasite to Host @ host_mapping
-6.	Inject parasite code to (host_mapping + parasite_offset)
+---	Inject Parasite to Host @ ptr
+6.	Inject parasite code to (ptr + parasite_offset)
 
 
 7.	Write infection to disk x_x
 
 */
 
-int 			encr_bundle_size = 32;			// size of key + addrs
+int 			encr_bundle_size = 16;			// size of key + addrs
 Elf64_Off		textoff;						// offset of .text segment
 Elf64_Off		textend;						// offset of the end of .text segment
+Elf64_Off		textlol;
 Elf64_Addr		parasite_load_address;			// parasite entry point (if parasite is LSB EXEC)
 Elf64_Off		parasite_offset;				// Parasite entry point (if parasite is .so)
 u_int64_t		parasite_size;					
@@ -101,7 +102,7 @@ void AddrPatcher(u_int8_t *parasite, long placeholder, long address)
 	for (i = 0 ; i < parasite_size ; ++i)
 	{
 		long potential_placeholder = *((long *)(ptr + i));
-		
+
 		if ( !(placeholder ^ potential_placeholder) ) 
 		{
 			*((long *)(ptr + i)) = address;
@@ -137,12 +138,12 @@ void SHT_Patcher(void *ptr)
 
 // Returns gap size (accomodation for parasite code in padding between .text segment and next segment 
 // after .text segment) 
-Elf64_Off PaddingSizeFinder(void *host_mapping)
+Elf64_Off PaddingSizeFinder(void *ptr)
 {   
-	Elf64_Ehdr	*elf_header	= (Elf64_Ehdr *) host_mapping;
-	u_int16_t	phnum 		= elf_header->e_phnum;
-	Elf64_Off	pht_offset 	= elf_header->e_phoff;
-	Elf64_Phdr *phdr = (Elf64_Phdr *)(host_mapping + pht_offset);
+	Elf64_Ehdr	*ehdr		= (Elf64_Ehdr *) ptr;
+	u_int16_t	phnum 		= ehdr->e_phnum;
+	Elf64_Off	pht_offset 	= ehdr->e_phoff;
+	Elf64_Phdr *phdr = (Elf64_Phdr *)(ptr + pht_offset);
 
 	// Parse PHT entries
 	u_int16_t TEXT_SEGMENT_FOUND = 0;
@@ -303,9 +304,12 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	truekey = key_generator();
 
 	// passage d'informations pour le decryptage du format debut encryption/key/fin encryption
-	*((long *)(ptr + parasite_offset)) = textoff;
-	ft_memmove((ptr + parasite_offset + 8), truekey, 16);
-	*((long *)(ptr + parasite_offset + 24)) = textend;
+	ft_memmove((ptr + parasite_offset), truekey, 16);
+	AddrPatcher(parasite_code, 0x1111111111111111, textoff);
+	AddrPatcher(parasite_code, 0x2222222222222222, textend);
+	// *((long *)(ptr + parasite_offset)) = textoff;
+	// ft_memmove((ptr + parasite_offset + 8), truekey, 16);
+	// *((long *)(ptr + parasite_offset + 24)) = textend;
 
 	// printf("%x <-> %x\n", *((long *)(ptr + parasite_offset)), *((long *)(ptr + parasite_offset + 24)));
 
