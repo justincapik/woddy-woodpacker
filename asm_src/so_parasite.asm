@@ -84,14 +84,16 @@ xorLoop:
 	xor cl, al
 	mov byte [r10], cl
 
+	; look if key is at the end
 	cmp byte [r13], 0
 	jne endKeyStuff
 
+	; if key is at the end, restart key
 rebootKey:
 	lea r13, [rel _start - KEY_ADDR - 1]
 
 endKeyStuff:
-	; inc encryption addr and jump back at the beginning of loop
+	; inc encryption addr and key addr then jump back at the beginning of loop
 	inc r13
 	inc r10
 	jmp xorLoop
