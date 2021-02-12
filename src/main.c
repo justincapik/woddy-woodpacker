@@ -17,9 +17,6 @@ static int	*processing(char *ptr, off_t size, char* filename)
 	{
 		if (write_woody(ptr, size, filename))
 			return (0);
-		// change file_info
-		// write to other filemame
-		
 		return (0);
 	}
 	else

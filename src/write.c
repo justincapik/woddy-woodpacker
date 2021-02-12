@@ -46,7 +46,7 @@ Elf64_Off		parasite_offset;				// Parasite entry point (if parasite is .so)
 u_int64_t		parasite_size;					
 // u_int64_t		keys_size = 32;
 u_int64_t		parasite_full_size;					
-int8_t			*parasite_code;					// Parasite residence (in memory before meeting its host )
+int8_t			*parasite_code;					// Parasite residence (in memory before meeting its host)
 Elf64_Off		text_segment_end_offset;		// Location to inject parasite
 char *truekey;
 
@@ -104,7 +104,7 @@ void AddrPatcher(u_int8_t *parasite, long placeholder, long address)
 	{
 		long potential_placeholder = *((long *)(ptr + i));
 
-		if ( !(placeholder ^ potential_placeholder) ) 
+		if (!(placeholder ^ potential_placeholder))
 		{
 			// printf("found placeholder [%d] -> [%x]\n", i, address);
 			*((long *)(ptr + i)) = address;
@@ -125,10 +125,10 @@ void SHT_Patcher(void *ptr)
     Elf64_Shdr *shdr = (Elf64_Shdr *) (ptr + sht_offset);
 
     int i;
-    for ( i=0 ; i < shnum ; ++i )
+    for (i=0 ; i < shnum ; ++i)
     {
 		current_section_end_offset = shdr[i].sh_offset + shdr[i].sh_size;
-        if ( text_segment_end_offset == current_section_end_offset)
+        if (text_segment_end_offset == current_section_end_offset)
         {
             // This is the last section of .text Segment
 			// Increase the sizeof this section by a parasite_full_size to accomodate parasite
@@ -150,7 +150,7 @@ Elf64_Off PaddingSizeFinder(void *ptr)
 	// Parse PHT entries
 	u_int16_t TEXT_SEGMENT_FOUND = 0;
 	int i;
-	for ( i = 0 ; i < phnum ; ++i)
+	for (i = 0 ; i < phnum ; ++i)
 	{
 		// Find the .text Segment (containing .text section)
 		if (TEXT_SEGMENT_FOUND  == 0 &&
@@ -203,7 +203,7 @@ void ParasiteLoader(char *parasite_path)
 
 	// Get the parasite_size using lstat() syscall
 	struct stat buf;
-	if ( lstat(parasite_path, &buf) != 0 )
+	if (lstat(parasite_path, &buf) != 0)
 	{
 		perror(RED"ParasiteLoader - lstat():"RESET);
 		exit(0x61);
@@ -251,13 +251,13 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	int HOST_IS_EXECUTABLE = 0;	// Host is LSB Executable and not Shared Object
 
 	// Identify the binary & SKIP Relocatable, files and 32-bit class of binaries
-    if ( ehdr->e_type == ET_REL || ehdr->e_type == ET_CORE )
+    if (ehdr->e_type == ET_REL || ehdr->e_type == ET_CORE)
     	return (0);
-	else if ( ehdr->e_type == ET_EXEC )
+	else if (ehdr->e_type == ET_EXEC)
 		HOST_IS_EXECUTABLE = 1;
-	else if ( ehdr->e_type == ET_DYN  )
+	else if (ehdr->e_type == ET_DYN )
 		HOST_IS_EXECUTABLE = 0;
-    if ( ehdr->e_ident[EI_CLASS] == ELFCLASS32 )
+    if (ehdr->e_ident[EI_CLASS] == ELFCLASS32)
     	return (0);
 
 	// Load Parasite into memory (from disk), uses extern 'parasite_path_for_exec' defined in main.c implicitly

@@ -19,11 +19,7 @@ ALLOC_SPACE equ 0x20		; 32
 
 O_RDONLY    equ 0x0         ; 0
 
-
-; BEGIN_ADDR  equ 0x20        ; 32
-; KEY_ADDR    equ 0x18        ; 24
 KEY_ADDR    equ 0x10        ; 16
-; END_ADDR    equ 0x8         ; 8
 ;-x-x-x-x- CONSTANTS -x-x-x-x-;
 
 
@@ -61,14 +57,8 @@ parasite:
 ; .text is xor crypted, using a xor on .text mem to uncrypt it
 unxor:
 
-	push r12
 	push r13
 	push r15
-
-	; creating counter for key
-	xor r12, r12
-	%define count_key r12b
-	mov count_key,0
 
 	; r10 -> encryption start
 	; r13 -> key start
@@ -94,20 +84,15 @@ xorLoop:
 	xor cl, al
 	mov byte [r10], cl
 
-	cmp count_key, 15 ; if key is at the end, restart key and counter
-	je rebootKey
-
-	; else inc key
-	inc count_key
-	inc r13
-	jmp endKeyStuff
+	cmp byte [r13], 0
+	jne endKeyStuff
 
 rebootKey:
-	lea r13, [rel _start - KEY_ADDR]
-	mov count_key, 0
+	lea r13, [rel _start - KEY_ADDR - 1]
 
 endKeyStuff:
 	; inc encryption addr and jump back at the beginning of loop
+	inc r13
 	inc r10
 	jmp xorLoop
 
@@ -115,7 +100,6 @@ endXorLoop:
 
 	pop r15
 	pop r13
-	pop r12
 
 ;--------------------------------------------------------------------
 
