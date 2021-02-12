@@ -76,6 +76,7 @@ char    *key_generator()
         if (key[i] < 0)
         	key[i] *= -1;
         key[i] = ((key[i] % (125 - 32)) + 33);
+        // key[i] = 'A';
     }
     key[15] = 0;
 
@@ -97,7 +98,7 @@ char    *key_generator()
 void AddrPatcher(u_int8_t *parasite, long placeholder, long address)
 {
 	u_int8_t *ptr = parasite;
-
+	// printf("AddrPatcher\n");
 	int i;
 	for (i = 0 ; i < parasite_size ; ++i)
 	{
@@ -105,6 +106,7 @@ void AddrPatcher(u_int8_t *parasite, long placeholder, long address)
 
 		if ( !(placeholder ^ potential_placeholder) ) 
 		{
+			// printf("found placeholder [%d] -> [%x]\n", i, address);
 			*((long *)(ptr + i)) = address;
 			return;
 		}
@@ -230,24 +232,12 @@ void ParasiteLoader(char *parasite_path)
 int			encryptor(char *ptr, off_t size)
 {
 	char	encryptedName[] = "encrypted";
-	// char *key;
-	// key = key_generator();
-
-	int		enfd;
-	if ((enfd = open(encryptedName, O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1)
-	{
-		fprintf(stderr, "couldn't make encryption file\n");
-		return (1);
-	}
 
 	printf(YELLOW"encryption addresss ["RED"%x "YELLOW"<-> "RED"%x"YELLOW"]\n"RESET, textoff, textend);
 	// printf("taille text ->%d || %d\n", sizeof(textoff), sizeof(textend));
+	int j = -1;
 	for (off_t i = textoff; i < textend; i++)
-		ptr[i] ^= truekey[i % 16];
-
-	write(enfd, ptr, size);
-	close(enfd);
-	free(truekey);
+		ptr[i] ^= truekey[++j % 16];
 
 	return (0);
 }
@@ -285,7 +275,6 @@ int			write_woody(char *ptr, off_t size, char *filename)
 		return 0;
 	}
 	
-
 	// Save original_entry_point of host and patch host entry point with parasite_offset
 	Elf64_Addr original_entry_point = ehdr->e_entry; 
 	if (HOST_IS_EXECUTABLE)
@@ -297,22 +286,17 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	// Patch SHT
 	SHT_Patcher(ptr);
 
-	// Patch Parasite jmp-on-exit address.
-	// AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, original_entry_point);
+	// Patch Parasite with entrypoint and .text start
 	AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, textend - original_entry_point);
+	AddrPatcher(parasite_code, 0x1111111111111111, textend - textoff);
 
-	// call to the key generator (faudra penser a le deplacer)
+	// call to the key generator then the enncryptor
 	truekey = key_generator();
+	encryptor(ptr, size);
 
-	// passage d'informations pour le decryptage du format debut encryption/key/fin encryption
+	// passage d'informations pour le decryptage
 	ft_memmove((ptr + parasite_offset), truekey, 16);
-	// AddrPatcher(parasite_code, 0x1111111111111111, textoff);
-	// AddrPatcher(parasite_code, 0x2222222222222222, textend);
-	// *((long *)(ptr + parasite_offset)) = textoff;
-	// ft_memmove((ptr + parasite_offset + 8), truekey, 16);
-	// *((long *)(ptr + parasite_offset + 24)) = textend;
-
-	// printf("%x <-> %x\n", *((long *)(ptr + parasite_offset)), *((long *)(ptr + parasite_offset + 24)));
+	free(truekey);
 
 	// Inject parasite in Host memory
 	ft_memmove((ptr + parasite_offset + encr_bundle_size), parasite_code, parasite_size);
@@ -324,7 +308,6 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	write(fd, ptr, size);
 	close(fd);
 
-	encryptor(ptr, size);
 
 	// DEBUG
 	fprintf(stdout, BLUE"<+>"RED" success \\o/"RESET"  :  "GREEN"%s\n"RESET, filename);
