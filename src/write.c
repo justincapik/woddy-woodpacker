@@ -229,19 +229,54 @@ void ParasiteLoader(char *parasite_path)
 	close(parasite_fd);
 }
 
+void			xtea(void *key, void *data) {
+    int      i;
+    u_int32_t x0, x1, t, sum=0;
+    
+    u_int32_t *k=(u_int32_t*)key;
+    u_int32_t *x=(u_int32_t*)data;
+    
+    // load 64-bit plain text
+    x0 = x[0]; x1 = x[1];
+    
+    for (i=64; i>0; i--) {
+      t = sum;
+      // add constant every 2nd round
+      if (i & 1) {
+        sum += 0x9E3779B9;
+        t = sum >> 11;          
+      }
+      x0 += ((((x1 << 4) ^ 
+        (x1 >> 5)) + x1) ^ 
+        (sum + k[t & 3]));
+         
+      u_int32_t tmp = x0;
+      x0 = x1;
+      x1 = tmp;
+    }
+    // save 64-bit cipher text
+    x[0] = x0; x[1] = x1;
+}
+
 int			encryptor(char *ptr, off_t size)
 {
 	char	encryptedName[] = "encrypted";
 
 	printf(YELLOW"encryption addresss ["RED"%x "YELLOW"<-> "RED"%x"YELLOW"]\n"RESET, textoff, textend);
 	// printf("taille text ->%d || %d\n", sizeof(textoff), sizeof(textend));
+	/*
 	int j = -1;
 	for (off_t i = textoff; i < textend; i++)
 		ptr[i] ^= truekey[++j % 16];
+	*/
+
+	//xtea(truekey, &(ptr[textoff])); // 64 bits seulement
+	
+	/*
 	j = -1;
 	for (off_t i = textoff; i < textend; i++)
 		ptr[i] ^= truekey[12 - (++j % 8)]; // key from [12] to [5]
-
+	*/
 	return (0);
 }
 
