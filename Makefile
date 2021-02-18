@@ -6,7 +6,7 @@
 #    By: apsaint- <apsaint-@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2018/11/06 16:34:32 by pharatyk          #+#    #+#              #
-#    Updated: 2021/02/03 11:38:15 by pharatyk         ###   ########.fr        #
+#    Updated: 2021/02/18 15:49:10 by pharatyk         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -16,10 +16,11 @@ ASM_NAME = 		payload
 OBJ_DIR  =		./obj/C/
 ASM_OBJ_DIR  =	./obj/ASM/
 
-SRC_WWP_DIR =	./src/
-SRC_WWP = 		main.c\
-				write.c \
-				core.c
+SRC_WWP_DIR =	./woody_src/
+SRC_WWP = 		infector.c\
+				main.c\
+				patcher.c\
+				write.c
 
 SRC_ASM_DIR = ./asm_src/
 SRC_ASM = exec_parasite.asm\

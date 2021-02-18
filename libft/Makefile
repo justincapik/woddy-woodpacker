@@ -6,7 +6,7 @@
 #    By: kemartin <kemartin@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2019/07/18 15:47:39 by kemartin          #+#    #+#              #
-#    Updated: 2021/01/16 12:02:30 by pharatyk         ###   ########.fr        #
+#    Updated: 2021/02/18 15:34:13 by pharatyk         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -115,11 +115,9 @@ $(NAME): $(OBJ)
 all: $(NAME)
 
 clean:
-	@printf "clean  [done]\n"
 	@rm -f $(OBJ)
 
 fclean: clean
-	@printf "fclean [done]\n"
 	@rm -f $(NAME)
 
 re: fclean all
