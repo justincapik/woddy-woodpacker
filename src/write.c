@@ -28,27 +28,29 @@
 --- PATCH Parasite offset
 5.	Find and replace Parasite jmp exit addresss with original_entry_point 0x????????
 
+--- Create key and encrypt .text segment
+6.  injectkey to (ptr + parasite_offset)
 
 ---	Inject Parasite to Host @ ptr
-6.	Inject parasite code to (ptr + parasite_offset)
+7.	Inject parasite code to (ptr + parasite_offset + keysize)
 
 
-7.	Write infection to disk x_x
+8.	Write infection to woody
 
 */
 
-int 			encr_bundle_size = 16;			// size of key + addrs
+int 			encr_bundle_size = 16;			// size of decryption bundle
 Elf64_Off		textoff;						// offset of .text segment
 Elf64_Off		textend;						// offset of the end of .text segment
-Elf64_Off		textlol;
+Elf64_Off		textafter;						// offset of the segment just after .text segment
 Elf64_Addr		parasite_load_address;			// parasite entry point (if parasite is LSB EXEC)
 Elf64_Off		parasite_offset;				// Parasite entry point (if parasite is .so)
-u_int64_t		parasite_size;					
-// u_int64_t		keys_size = 32;
-u_int64_t		parasite_full_size;					
+u_int64_t		parasite_size;					// Size of parasite
+u_int64_t		parasite_full_size;				// Size of parasite including key size
 int8_t			*parasite_code;					// Parasite residence (in memory before meeting its host)
 Elf64_Off		text_segment_end_offset;		// Location to inject parasite
 char *truekey;
+u_int64_t		OffsetPadder;
 
 // generator for a 16bit long printable ascii char*
 char    *key_generator()
@@ -76,7 +78,7 @@ char    *key_generator()
         if (key[i] < 0)
         	key[i] *= -1;
         key[i] = ((key[i] % (125 - 32)) + 33);
-        // key[i] = 'A';
+        // key[i] = 'Z';
     }
     key[15] = 0;
 
@@ -89,7 +91,7 @@ char    *key_generator()
     i = -1;
     while(++i < 16)
     	retkey[i] = key[i];
-    printf(YELLOW"key_value : ["RED"%s"YELLOW"]\n"RESET, retkey);
+    printf(BOLDRED"<o> "RESET YELLOW"key_value : "BOLDBLUE"["RESET YELLOW"%s"BOLDBLUE"]\n"RESET, retkey);
     return (retkey);
 }
 
@@ -116,9 +118,9 @@ void AddrPatcher(u_int8_t *parasite, long placeholder, long address)
 // Patch SHT (i.e. find the last section of .text segment and increase its size by parasite_size)
 void SHT_Patcher(void *ptr)
 {
-	Elf64_Ehdr	*elf_header 	= (Elf64_Ehdr *) ptr;	
-	Elf64_Off	sht_offset 		= elf_header->e_shoff;
-	u_int16_t	shnum			= elf_header->e_shnum;
+	Elf64_Ehdr	*ehdr 			= (Elf64_Ehdr *) ptr;	
+	Elf64_Off	sht_offset 		= ehdr->e_shoff;
+	u_int16_t	shnum			= ehdr->e_shnum;
     Elf64_Off	current_section_end_offset;
 
     // Point shdr (Pointer to iterate over SHT) to the last entry of SHT
@@ -138,6 +140,43 @@ void SHT_Patcher(void *ptr)
     }
 }
 
+// add more padding to accomodate virus
+Elf64_Off PaddingBooster(void *ptr, Elf64_Off padding_size, u_int64_t parasite_full_size)
+{
+	Elf64_Off	padding_size_mem = padding_size;
+
+	while (padding_size < parasite_full_size)
+		padding_size += getpagesize();
+	padding_size -= padding_size_mem;
+
+	Elf64_Ehdr	*ehdr		= (Elf64_Ehdr *) ptr;
+
+	int i;
+	u_int16_t	phnum		= ehdr->e_phnum;
+	Elf64_Off	pht_offset	= ehdr->e_phoff;
+	Elf64_Phdr	*phdr = (Elf64_Phdr *)(ptr + pht_offset);
+
+	for (i = 0 ; i < phnum ; ++i)
+	{
+		// Find all segment after .text Segment and add padding
+		if (phdr[i].p_offset > OffsetPadder)
+			phdr[i].p_offset += padding_size;
+	}
+
+	u_int16_t	shnum			= ehdr->e_shnum;
+	Elf64_Off	sht_offset		= ehdr->e_shoff;
+    Elf64_Shdr	*shdr = (Elf64_Shdr *) (ptr + sht_offset);
+
+	for (i = 0 ; i < shnum ; ++i)
+	{
+		// Find all shdr after .text segment
+		if (shdr[i].sh_offset > OffsetPadder)
+			shdr[i].sh_offset += padding_size;
+	}
+	padding_size += padding_size_mem;
+	return (padding_size);
+}
+
 // Returns gap size (accomodation for parasite code in padding between .text segment and next segment 
 // after .text segment) 
 Elf64_Off PaddingSizeFinder(void *ptr)
@@ -147,6 +186,7 @@ Elf64_Off PaddingSizeFinder(void *ptr)
 	Elf64_Off	pht_offset 	= ehdr->e_phoff;
 	Elf64_Phdr *phdr = (Elf64_Phdr *)(ptr + pht_offset);
 
+	OffsetPadder = 0;
 	// Parse PHT entries
 	u_int16_t TEXT_SEGMENT_FOUND = 0;
 	int i;
@@ -175,12 +215,13 @@ Elf64_Off PaddingSizeFinder(void *ptr)
 
 			// Make text segment writable
 			phdr[i].p_flags = PF_R | PF_W | PF_X;
+
+			OffsetPadder = phdr[i].p_offset;
 		}
 		// Find next segment after .text Segment and calculate padding size
-		if (TEXT_SEGMENT_FOUND  == 1		&&
-			phdr[i].p_type  == PT_LOAD	&&
-			phdr[i].p_flags == (PF_R | PF_W))
+		if (phdr[i].p_offset > OffsetPadder && OffsetPadder != 0)
 		{
+			textafter = phdr[i].p_offset;
 			// Return padding_size (maximum size of parasite that host can accomodate in its 
 			// padding between the end of .text segment and start of next loadable segment)
 			return (phdr[i].p_offset - parasite_offset);
@@ -233,7 +274,7 @@ int			encryptor(char *ptr, off_t size)
 {
 	char	encryptedName[] = "encrypted";
 
-	printf(YELLOW"encryption addresss ["RED"%x "YELLOW"<-> "RED"%x"YELLOW"]\n"RESET, textoff, textend);
+	printf(BOLDRED"<o> "RESET YELLOW"encryption address : "BOLDBLUE"["RESET YELLOW"%x "BOLDBLUE"<-> "RESET YELLOW"%x"BOLDBLUE"]\n"RESET, textoff, textend);
 	// printf("taille text ->%d || %d\n", sizeof(textoff), sizeof(textend));
 	int j = -1;
 	for (off_t i = textoff; i < textend; i++)
@@ -247,8 +288,7 @@ int			encryptor(char *ptr, off_t size)
 
 int			write_woody(char *ptr, off_t size, char *filename)
 {
-	// DEBUG
-	fprintf(stdout, BLUE"-x-x-x-x- "RED"\\_<O>_<O>_/ "BLUE"-x-x-x-x-\n"RED"-> "YELLOW"%s\n\n"RESET, filename); 
+	fprintf(stdout, BOLDBLUE"-x-x-x-x- "RED"\\_<O>_<O>_/ "BLUE"-x-x-x-x-\n"RED"-> "CYAN"%s\n\n"RESET, filename); 
 
 	Elf64_Ehdr *ehdr = (Elf64_Ehdr *) ptr;
 	int HOST_IS_EXECUTABLE = 0;	// Host is LSB Executable and not Shared Object
@@ -271,11 +311,13 @@ int			write_woody(char *ptr, off_t size, char *filename)
 
 	// Get Home size (in bytes) of parasite residence in host
 	// and check if host's home size can accomodate a parasite this big in size
-	Elf64_Off padding_size = PaddingSizeFinder(ptr);
+	Elf64_Off	padding_size = PaddingSizeFinder(ptr);
+	u_int16_t	PADDING_BOOSTED = 0;
 	if (padding_size < parasite_full_size)
 	{
-		fprintf(stderr, RED"[+]"RESET" Host "YELLOW"%s"RESET" cannot accomodate parasite, parasite is angry "RED"x_x \n"RESET, filename); 
-		return 0;
+		fprintf(stderr, BOLDRED"<o>"RESET YELLOW" Host "CYAN"%s"YELLOW" parasite too big, boosting padding\n"RESET, filename);
+		padding_size = PaddingBooster(ptr, padding_size, parasite_full_size);
+		PADDING_BOOSTED = 1;
 	}
 	
 	// Save original_entry_point of host and patch host entry point with parasite_offset
@@ -308,12 +350,19 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	int fd;
 	if ((fd = open("woody", O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1)
 		return (1);
-	write(fd, ptr, size);
+	if (PADDING_BOOSTED)
+	{
+		write(fd, ptr, (textend + parasite_full_size));
+		for (off_t i = 0; i < (padding_size - parasite_full_size); ++i)
+			write(fd, "\0", 1);
+		write(fd, ptr + textafter, (size - textafter));
+	}
+	else
+		write(fd, ptr, size);
 	close(fd);
 
 
-	// DEBUG
-	fprintf(stdout, BLUE"<+>"RED" success \\o/"RESET"  :  "GREEN"%s\n"RESET, filename);
+	fprintf(stdout, BOLDCYAN"<o>"RESET YELLOW" success \\o/  :  "CYAN"%s\n"RESET, filename);
 
 	return 0;
 }
