@@ -60,8 +60,11 @@ int			write_woody(char *ptr, off_t size, char *filename)
     	return (0);
 
 	// Load Parasite into memory (from disk), uses extern 'parasite_path_for_exec' defined in main.c implicitly
-	ParasiteLoader("./obj/ASM/parasite.bin");
-	// ParasiteLoader("./obj/ASM/exec_parasite.bin");
+    int ENC = 1;
+    if (ENC)
+		ParasiteLoader("./obj/ASM/parasite.bin");
+	else
+		ParasiteLoader("./obj/ASM/no_enc_parasite.bin");
 
 	// ###################################################################################################################
 											// PADDING + HDR ADJUSTMENTS
@@ -103,8 +106,8 @@ int			write_woody(char *ptr, off_t size, char *filename)
 
 	// call to the key generator then the enncryptor
 	truekey = key_generator();
-	// if (HOST_IS_EXECUTABLE == 0)
-	// encryptor(ptr, size);
+	if (ENC)
+		encryptor(ptr, size);
 
 	// ###################################################################################################################
 													// WRITE
@@ -113,29 +116,26 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	//write memory in a new file
 	int fd;
 	if ((fd = open("woody", O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1)
+		return (1);
 
-	if (PADDING_BOOSTED)
-	{
-		write(fd, ptr, (textend));
-		write(fd, truekey, encr_bundle_size);
-		write(fd, parasite_code, parasite_size);
+	// ###################################################################################################################
+	//  MEM STRAT
+	// // passage d'informations pour le decryptage
+	// ft_memmove((ptr + parasite_offset), truekey, 16);
+	// free(truekey);
 
-		for (off_t i = 0; i < (padding_size - parasite_full_size); ++i)
-			write(fd, "\0", 1);
+	// // Inject parasite in Host memory
+	// ft_memmove((ptr + parasite_offset + encr_bundle_size), parasite_code, parasite_size);
+	// write(fd, ptr, size);
+	// ###################################################################################################################
 
-		write(fd, ptr + textafter, (size - textafter));
-	}
-	else
-	{
-		// passage d'informations pour le decryptage
-		ft_memmove((ptr + parasite_offset), truekey, 16);
-		free(truekey);
+	write(fd, ptr, (textend));
+	write(fd, truekey, encr_bundle_size);
+	write(fd, parasite_code, parasite_size);
+	for (off_t i = 0; i < (padding_size - parasite_full_size); ++i)
+		write(fd, "\0", 1);
+	write(fd, ptr + textafter, (size - textafter));
 
-		// Inject parasite in Host memory
-		ft_memmove((ptr + parasite_offset + encr_bundle_size), parasite_code, parasite_size);
-			return (1);
-		write(fd, ptr, size);
-	}
 	close(fd);
 
 	fprintf(stdout, BOLDCYAN"<o>"RESET YELLOW" success \\o/  :  "CYAN"%s\n"RESET, filename);

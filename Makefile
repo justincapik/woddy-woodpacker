@@ -6,7 +6,7 @@
 #    By: paulo <paulo@student.42.fr>                +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2018/11/06 16:34:32 by pharatyk          #+#    #+#              #
-#    Updated: 2021/03/01 13:13:21 by paulo            ###   ########.fr        #
+#    Updated: 2021/03/01 15:38:07 by paulo            ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,7 +23,8 @@ SRC_WWP = 		infector.c\
 				write.c
 
 SRC_ASM_DIR =	./asm_src/
-SRC_ASM =		parasite.asm
+SRC_ASM =		parasite.asm\
+				no_enc_parasite.asm\
 
 SRCS      =	$(addprefix $(SRC_WWP_DIR), $(SRC_WWP))
 ASM_SRCS  =	$(addprefix $(SRC_ASM_DIR), $(SRC_ASM))

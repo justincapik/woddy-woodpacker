@@ -40,52 +40,7 @@ parasite:
 	mov dl, 0x20					; message size = 30 bytes
 	syscall
 
-	xor	rax, rax
-	add	rax, SYS_WRITE
-	mov rdi, rax
-	lea rsi, [rel _start]
-	xor rdx, rdx
-	mov dl, 15
-	syscall
-
-	xor	rax, rax
-	add	rax, SYS_WRITE
-	mov rdi, rax
-	lea rsi, [rel newline]
-	xor rdx, rdx
-	mov dl, 1
-	syscall
-
-
-	push r10
-	push r13
-	; r10 -> encryption start
-	; r13 -> key start
-	; r15 -> end encryption (key start)
-	xor r13, r13
-	lea r13, [rel _start - KEY_ADDR]
-	mov r10, r13
-	sub r10, [rel encStart]
-
-
-	xor	rax, rax
-	add	rax, SYS_WRITE
-	mov rdi, rax
-	mov rsi, r10
-	xor rdx, rdx
-	mov dl, 20
-	syscall
-
-	xor	rax, rax
-	add	rax, SYS_WRITE
-	mov rdi, rax
-	lea rsi, [rel newline]
-	xor rdx, rdx
-	mov dl, 1
-	syscall
-
-	pop r13
-	pop r10
+;--------------------------------------------------------------------
 
 ender:
 	; Restoring register state
