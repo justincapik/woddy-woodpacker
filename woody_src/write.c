@@ -96,12 +96,23 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	// ###################################################################################################################
 
 	// Patch Parasite with entrypoint and .text start
+	// if (HOST_IS_EXECUTABLE)
+	// {
+	// 	AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, textend - original_entry_point);
+	// 	AddrPatcher(parasite_code, 0x1111111111111111, textend - textoff);
+	// }
+	// else
+	// {
+	printf("entrypoint:{%x}| textoff:{%x}\n", textend - original_entry_point, textend - textoff);
+	printf("entrypoint:{%d}| textoff:{%d}\n", textend - original_entry_point, textend - textoff);
 	AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, textend - original_entry_point);
 	AddrPatcher(parasite_code, 0x1111111111111111, textend - textoff);
+	// }
 
 	// call to the key generator then the enncryptor
 	truekey = key_generator();
-	encryptor(ptr, size);
+	if (HOST_IS_EXECUTABLE == 0)
+		encryptor(ptr, size);
 
 	// passage d'informations pour le decryptage
 	ft_memmove((ptr + parasite_offset), truekey, 16);
