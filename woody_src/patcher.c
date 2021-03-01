@@ -105,6 +105,7 @@ Elf64_Off	PaddingSizeFinder(void *ptr)
 			TEXT_SEGMENT_FOUND = 1;
 			// get the offset of the .text segment for encryption
 			textoff = phdr[i].p_offset;
+			load_textoff = phdr[i].p_vaddr;
 
 			// Calculate the offset where the .text segment ends to bellow calculate padding_size 
 			text_segment_end_offset	= phdr[i].p_offset + phdr[i].p_filesz;

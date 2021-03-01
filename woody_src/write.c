@@ -47,7 +47,7 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	// ###################################################################################################################
 	encr_bundle_size = 16; // size of parasite's needs
 	Elf64_Ehdr *ehdr = (Elf64_Ehdr *) ptr;
-	int HOST_IS_EXECUTABLE = 0;	// Host is LSB Executable and not Shared Object
+	HOST_IS_EXECUTABLE = 0;	// Host is LSB Executable and not Shared Object
 
 	// Identify the binary & SKIP Relocatable, files and 32-bit class of binaries
     if (ehdr->e_type == ET_REL || ehdr->e_type == ET_CORE)
@@ -60,10 +60,7 @@ int			write_woody(char *ptr, off_t size, char *filename)
     	return (0);
 
 	// Load Parasite into memory (from disk), uses extern 'parasite_path_for_exec' defined in main.c implicitly
-	if (HOST_IS_EXECUTABLE)
-		ParasiteLoader("./obj/ASM/exec_parasite.bin");
-	else
-		ParasiteLoader("./obj/ASM/so_parasite.bin");
+	ParasiteLoader("./obj/ASM/parasite.bin");
 
 	// ###################################################################################################################
 											// PADDING + HDR ADJUSTMENTS
@@ -96,23 +93,17 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	// ###################################################################################################################
 
 	// Patch Parasite with entrypoint and .text start
-	// if (HOST_IS_EXECUTABLE)
-	// {
-	// 	AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, textend - original_entry_point);
-	// 	AddrPatcher(parasite_code, 0x1111111111111111, textend - textoff);
-	// }
-	// else
-	// {
-	// printf("entrypoint:{%x}| textoff:{%x}\n", textend - original_entry_point, textend - textoff);
-	// printf("entrypoint:{%d}| textoff:{%d}\n", textend - original_entry_point, textend - textoff);
 	AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, textend - original_entry_point);
-	AddrPatcher(parasite_code, 0x1111111111111111, textend - textoff);
-	// }
+	if (HOST_IS_EXECUTABLE)
+		AddrPatcher(parasite_code, 0x1111111111111111, textend - load_textoff);
+	else
+		AddrPatcher(parasite_code, 0x1111111111111111, textend - textoff);
+	textend = parasite_offset;
 
 	// call to the key generator then the enncryptor
 	truekey = key_generator();
-	if (HOST_IS_EXECUTABLE == 0)
-		encryptor(ptr, size);
+	// if (HOST_IS_EXECUTABLE == 0)
+	encryptor(ptr, size);
 
 	// passage d'informations pour le decryptage
 	ft_memmove((ptr + parasite_offset), truekey, 16);

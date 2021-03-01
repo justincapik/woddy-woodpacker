@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: apsaint- <apsaint-@student.42.fr>          +#+  +:+       +#+         #
+#    By: paulo <paulo@student.42.fr>                +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2018/11/06 16:34:32 by pharatyk          #+#    #+#              #
-#    Updated: 2021/02/18 15:49:10 by pharatyk         ###   ########.fr        #
+#    Updated: 2021/03/01 13:13:21 by paulo            ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -22,9 +22,8 @@ SRC_WWP = 		infector.c\
 				patcher.c\
 				write.c
 
-SRC_ASM_DIR = ./asm_src/
-SRC_ASM = exec_parasite.asm\
-		  so_parasite.asm
+SRC_ASM_DIR =	./asm_src/
+SRC_ASM =		parasite.asm
 
 SRCS      =	$(addprefix $(SRC_WWP_DIR), $(SRC_WWP))
 ASM_SRCS  =	$(addprefix $(SRC_ASM_DIR), $(SRC_ASM))

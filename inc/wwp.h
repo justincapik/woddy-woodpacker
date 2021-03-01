@@ -23,6 +23,7 @@ typedef struct	s_file_data
 
 int 			encr_bundle_size;				// size of decryption bundle
 Elf64_Off		textoff;						// offset of .text segment
+Elf64_Off		load_textoff;						// load offset of .text segment
 Elf64_Off		textend;						// offset of the end of .text segment
 Elf64_Off		textafter;						// offset of the segment just after .text segment
 Elf64_Addr		parasite_load_address;			// parasite entry point (if parasite is LSB EXEC)
@@ -33,7 +34,7 @@ int8_t			*parasite_code;					// Parasite residence (in memory before meeting its
 Elf64_Off		text_segment_end_offset;		// Location to inject parasite
 char			*truekey;						// malloc version of the encryption key
 u_int64_t		OffsetPadder;					// offset of the .text segment
-
+int				HOST_IS_EXECUTABLE;				// exec || so
 // ----------------MAIN-------------------
 int				write_woody(char *ptr, off_t size, char *filename);
 

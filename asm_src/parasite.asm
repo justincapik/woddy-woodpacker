@@ -40,21 +40,6 @@ parasite:
 	mov dl, 0x20					; message size = 30 bytes
 	syscall
 
-	xor	rax, rax
-	add	rax, SYS_WRITE
-	mov rdi, rax
-	lea rsi, [rel _start]
-	xor rdx, rdx
-	mov dl, 15
-	syscall
-
-	xor	rax, rax
-	add	rax, SYS_WRITE
-	mov rdi, rax
-	lea rsi, [rel newline]
-	xor rdx, rdx
-	mov dl, 1
-	syscall
 ; .text is xor crypted, using a xor on .text mem to uncrypt it
 
 ;--------------------------------------------------------------------
