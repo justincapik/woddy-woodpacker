@@ -103,8 +103,8 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	// }
 	// else
 	// {
-	printf("entrypoint:{%x}| textoff:{%x}\n", textend - original_entry_point, textend - textoff);
-	printf("entrypoint:{%d}| textoff:{%d}\n", textend - original_entry_point, textend - textoff);
+	// printf("entrypoint:{%x}| textoff:{%x}\n", textend - original_entry_point, textend - textoff);
+	// printf("entrypoint:{%d}| textoff:{%d}\n", textend - original_entry_point, textend - textoff);
 	AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, textend - original_entry_point);
 	AddrPatcher(parasite_code, 0x1111111111111111, textend - textoff);
 	// }
