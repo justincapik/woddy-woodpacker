@@ -60,7 +60,7 @@ int			write_woody(char *ptr, off_t size, char *filename)
     	return (0);
 
 	// Load Parasite into memory (from disk), uses extern 'parasite_path_for_exec' defined in main.c implicitly
-    int ENC = 1;
+    int ENC = 0;
     if (ENC)
 		ParasiteLoader("./obj/ASM/parasite.bin");
 	else
@@ -76,6 +76,8 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	u_int16_t	PADDING_BOOSTED = 0;
 	if (padding_size < parasite_full_size)
 	{
+		fprintf(stderr, BOLDRED"<o>"RESET YELLOW" Host "CYAN"%s"YELLOW" parasite too big, not supported YET :(\n"RESET, filename);
+		return (0);
 		fprintf(stderr, BOLDRED"<o>"RESET YELLOW" Host "CYAN"%s"YELLOW" parasite too big, boosting padding\n"RESET, filename);
 		padding_size = PaddingBooster(ptr, padding_size, parasite_full_size);
 		PADDING_BOOSTED = 1;

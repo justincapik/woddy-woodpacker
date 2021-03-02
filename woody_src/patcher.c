@@ -48,8 +48,11 @@ Elf64_Off	PaddingBooster(void *ptr, Elf64_Off padding_size, u_int64_t parasite_f
 {
 	Elf64_Off	padding_size_mem = padding_size;
 
+	printf("original padding_size %d\n", padding_size);
 	while (padding_size < parasite_full_size)
 		padding_size += getpagesize();
+	printf("new padding_size %d\n", padding_size);
+	printf("%d added\n", padding_size - padding_size_mem);
 	padding_size -= padding_size_mem;
 
 	Elf64_Ehdr	*ehdr		= (Elf64_Ehdr *) ptr;
@@ -165,7 +168,7 @@ Elf64_Off	PaddingSizeFinder(void *ptr)
 			OffsetPadder = phdr[i].p_offset + phdr[i].p_filesz;
 		}
 		// Find next segment after .text Segment and calculate padding size
-		if (phdr[i].p_offset > OffsetPadder && OffsetPadder != 0)
+		else if (OffsetPadder != 0)
 		{
 			textafter = phdr[i].p_offset;
 			// Return padding_size
