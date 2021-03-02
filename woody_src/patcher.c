@@ -98,6 +98,24 @@ u_int64_t  textoff_getter(void *ptr)
     return (0);
 }
 
+u_int64_t  load_textoff_getter(void *ptr)
+{
+	Elf64_Ehdr	*ehdr		= (Elf64_Ehdr *) ptr;
+
+
+	u_int16_t	shnum			= ehdr->e_shnum;
+	Elf64_Off	sht_offset		= ehdr->e_shoff;
+    Elf64_Shdr	*shdr = (Elf64_Shdr *) (ptr + sht_offset);
+    char *ajustor = ptr + (shdr + ehdr->e_shstrndx)->sh_offset;
+
+	for (int i = 0 ; i < shnum ; ++i)
+	{
+        if (!ft_strcmp((char*)(ajustor + shdr[i].sh_name), ".text"))
+    		return ((size_t)shdr[i].sh_addr);
+	}
+    return (0);
+}
+
 // Returns gap size (accomodation for parasite code in padding between .text segment and next segment 
 // after .text segment) 
 // Also Patch phdr
@@ -127,6 +145,7 @@ Elf64_Off	PaddingSizeFinder(void *ptr)
 			{
 				printf(BOLDRED"<o> "RESET YELLOW"textoff is down, getting another one\n"RESET);
 				textoff = textoff_getter(ptr);
+				load_textoff = load_textoff_getter(ptr);
 			}
 			if (!textoff)
 				printf(BOLDRED"<o> "RESET YELLOW"cannot get textoff right\n"RESET);
