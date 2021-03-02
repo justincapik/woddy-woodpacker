@@ -124,7 +124,10 @@ Elf64_Off	PaddingSizeFinder(void *ptr)
 			textoff = phdr[i].p_offset;
 			load_textoff = phdr[i].p_vaddr;
 			if (!textoff)
+			{
+				printf(BOLDRED"<o> "RESET YELLOW"textoff is down, getting another one\n"RESET);
 				textoff = textoff_getter(ptr);
+			}
 			if (!textoff)
 				printf(BOLDRED"<o> "RESET YELLOW"cannot get textoff right\n"RESET);
 
