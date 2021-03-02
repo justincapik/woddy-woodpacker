@@ -60,7 +60,7 @@ int			write_woody(char *ptr, off_t size, char *filename)
     	return (0);
 
 	// Load Parasite into memory (from disk), uses extern 'parasite_path_for_exec' defined in main.c implicitly
-    int ENC = 0;
+    int ENC = 1;
     if (ENC)
 		ParasiteLoader("./obj/ASM/parasite.bin");
 	else
