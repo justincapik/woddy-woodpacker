@@ -60,7 +60,7 @@ int			write_woody(char *ptr, off_t size, char *filename)
     	return (0);
 
 	// Load Parasite into memory (from disk), uses extern 'parasite_path_for_exec' defined in main.c implicitly
-    int ENC = 1;
+    int ENC = 0;
     if (ENC)
 		ParasiteLoader("./obj/ASM/parasite.bin");
 	else
@@ -134,8 +134,8 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	write(fd, parasite_code, parasite_size);
 	for (off_t i = 0; i < (padding_size - parasite_full_size); ++i)
 		write(fd, "\0", 1);
+	// printf("textafter[%x]\n", textafter);
 	write(fd, ptr + textafter, (size - textafter));
-
 	close(fd);
 
 	fprintf(stdout, BOLDCYAN"<o>"RESET YELLOW" success \\o/  :  "CYAN"%s\n"RESET, filename);

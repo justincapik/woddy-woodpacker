@@ -101,11 +101,12 @@ Elf64_Off	PaddingSizeFinder(void *ptr)
 			phdr[i].p_type  == PT_LOAD &&
 			phdr[i].p_flags == (PF_R | PF_X))
 		{
-
 			TEXT_SEGMENT_FOUND = 1;
 			// get the offset of the .text segment for encryption
 			textoff = phdr[i].p_offset;
 			load_textoff = phdr[i].p_vaddr;
+			if (!textoff)
+				printf("LE PTN DE TEXTOFF EST A 0\n");
 
 			// Calculate the offset where the .text segment ends to bellow calculate padding_size 
 			text_segment_end_offset	= phdr[i].p_offset + phdr[i].p_filesz;
@@ -119,7 +120,7 @@ Elf64_Off	PaddingSizeFinder(void *ptr)
 			// Make text segment writable
 			phdr[i].p_flags = PF_R | PF_W | PF_X;
 
-			OffsetPadder = phdr[i].p_offset;
+			OffsetPadder = phdr[i].p_offset + phdr[i].p_filesz;
 		}
 		// Find next segment after .text Segment and calculate padding size
 		if (phdr[i].p_offset > OffsetPadder && OffsetPadder != 0)
