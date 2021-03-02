@@ -1,43 +1,5 @@
 #include "wwp.h"
 
-/********************  ALGORITHM   *********************
-
---- Load parasite from file into memory
-1.	Get parasite_size and parasite_code addresss (location in allocated memory)
-
-
---- Find padding_size between .text segment and the NEXT segment after .text segment
-2.	.text segment : increase
-		-> p_filesz 		(by parasite size)
-		-> p_memsz 			(by parasite size)
-	Get and Set respectively,	
-	padding_size 	= (offset of next segment (after .text segment)) - (end of .text segment)
-	parasite_offset = (end of .text segment) or (end of last section of .text segment)
-
-
----	PATCH Host entry point
-3.	Save original_entry_point (e_entry) and replace it with parasite_offset
-
-
---- PATCH SHT
-4.  Find the last section in .text Segment and increase - 
-        -> sh_size          (by parasite size)
-
-
---- PATCH Parasite offset
-5.	Find and replace Parasite jmp exit addresss with original_entry_point 0x????????
-
---- Create key and encrypt .text segment
-6.  injectkey to (ptr + parasite_offset)
-
----	Inject Parasite to Host @ ptr
-7.	Inject parasite code to (ptr + parasite_offset + keysize)
-
-
-8.	Write infection to woody
-
-*/
-
 int			write_woody(char *ptr, off_t size, char *filename)
 {
 	fprintf(stdout, BOLDBLUE"-x-x-x-x- "RED"\\_<O>_<O>_/ "BLUE"-x-x-x-x-\n"RED"-> "CYAN"%s\n\n"RESET, filename); 
@@ -60,7 +22,7 @@ int			write_woody(char *ptr, off_t size, char *filename)
     	return (0);
 
 	// Load Parasite into memory (from disk), uses extern 'parasite_path_for_exec' defined in main.c implicitly
-    int ENC = 0;
+    int ENC = 1;
     if (ENC)
 		ParasiteLoader("./obj/ASM/parasite.bin");
 	else
