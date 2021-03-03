@@ -31,14 +31,57 @@ parasite:
 	; %rax      | %rdi | %rsi | %rdx
 	; sys_write	|  fd  | *buf | count
 
-	xor	rax, rax					; Zero out RAX
-	add	rax, SYS_WRITE				; Syscall number of write() - 0x1
-	mov rdi, rax					; File descriptor - 0x1 (STDOUT)
-	lea rsi, [rel message]			; Addresses the label relative to RIP (Instruction Pointer), i.e. 
-									; dynamically identifying the address of the 'message' label.
+	xor	rax, rax
+	add	rax, SYS_WRITE
+	mov rdi, rax
+	lea rsi, [rel message]
 	xor rdx, rdx
-	mov dl, 0x20					; message size = 30 bytes
+	mov dl, 0x20
 	syscall
+
+	push r13
+
+	; r10 -> encryption start
+	; r13 -> key start
+	; r15 -> end encryption (key start)
+	xor r13, r13
+	lea r13, [rel _start - KEY_ADDR]
+	mov r10, r13
+	sub r10, [rel encStart]
+
+	xor	rax, rax
+	add	rax, SYS_WRITE
+	mov rdi, rax
+	mov rsi, r13
+	xor rdx, rdx
+	mov dl, 20
+	syscall
+
+	xor	rax, rax
+	add	rax, SYS_WRITE
+	mov rdi, rax
+	lea rsi, [rel newline]
+	xor rdx, rdx
+	mov dl, 1
+	syscall
+
+	xor	rax, rax
+	add	rax, SYS_WRITE
+	mov rdi, rax
+	mov rsi, r10
+	xor rdx, rdx
+	mov dl, 20
+	syscall
+
+	xor	rax, rax
+	add	rax, SYS_WRITE
+	mov rdi, rax
+	lea rsi, [rel newline]
+	xor rdx, rdx
+	mov dl, 1
+	syscall
+
+	pop r13
 
 ;--------------------------------------------------------------------
 

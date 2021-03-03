@@ -47,10 +47,10 @@ int			write_woody(char *ptr, off_t size, char *filename)
 	
 	// Save original_entry_point of host and patch host entry point with parasite_offset
 	Elf64_Addr original_entry_point = ehdr->e_entry; 
-	if (HOST_IS_EXECUTABLE)
+	// if (HOST_IS_EXECUTABLE)
 		ehdr->e_entry 	= parasite_load_address + encr_bundle_size;
-	else
-		ehdr->e_entry 	= parasite_offset + encr_bundle_size;
+	// else
+	// 	ehdr->e_entry 	= parasite_offset + encr_bundle_size;
 
 	textend = ehdr->e_entry - encr_bundle_size;
 	// Patch SHT
@@ -62,10 +62,10 @@ int			write_woody(char *ptr, off_t size, char *filename)
 
 	// Patch Parasite with entrypoint and .text start
 	AddrPatcher(parasite_code, 0xAAAAAAAAAAAAAAAA, textend - original_entry_point);
-	if (HOST_IS_EXECUTABLE)
+	// if (HOST_IS_EXECUTABLE)
 		AddrPatcher(parasite_code, 0x1111111111111111, textend - load_textoff);
-	else
-		AddrPatcher(parasite_code, 0x1111111111111111, textend - textoff);
+	// else
+	// 	AddrPatcher(parasite_code, 0x1111111111111111, textend - textoff);
 	textend = parasite_offset;
 
 	// call to the key generator then the enncryptor

@@ -48,22 +48,29 @@ Elf64_Off	PaddingBooster(void *ptr, Elf64_Off padding_size, u_int64_t parasite_f
 {
 	Elf64_Off	padding_size_mem = padding_size;
 
-	while (padding_size < parasite_full_size)
-		padding_size += getpagesize();
+	// while (padding_size < parasite_full_size)
+	padding_size += getpagesize();
 	padding_size -= padding_size_mem;
 
 	Elf64_Ehdr	*ehdr		= (Elf64_Ehdr *) ptr;
+	int			i;
 
-	int i;
 	u_int16_t	phnum		= ehdr->e_phnum;
 	Elf64_Off	pht_offset	= ehdr->e_phoff;
 	Elf64_Phdr	*phdr = (Elf64_Phdr *)(ptr + pht_offset);
+	int			flag = 0;
 
 	for (i = 0 ; i < phnum ; ++i)
 	{
+		printf("phdr[%d]", i);
 		// Find all segment after .text Segment and add padding
-		if (phdr[i].p_offset > OffsetPadder)
+		if (phdr[i].p_offset > OffsetPadder || flag)
+		{
+			printf(" -> boosted");
+			flag = 1;
 			phdr[i].p_offset += padding_size;
+		}
+		printf("\n");
 	}
 
 	u_int16_t	shnum			= ehdr->e_shnum;
@@ -72,10 +79,16 @@ Elf64_Off	PaddingBooster(void *ptr, Elf64_Off padding_size, u_int64_t parasite_f
 
 	for (i = 0 ; i < shnum ; ++i)
 	{
+		printf("shdr[%d]", i);
 		// Find all shdr after .text segment
 		if (shdr[i].sh_offset > OffsetPadder)
+		{
+			printf(" -> boosted");
 			shdr[i].sh_offset += padding_size;
+		}
+		printf("\n");
 	}
+	ehdr->e_shoff += padding_size;
 	padding_size += padding_size_mem;
 	return (padding_size);
 }
@@ -132,11 +145,13 @@ Elf64_Off	PaddingSizeFinder(void *ptr)
 	int i;
 	for (i = 0 ; i < phnum ; ++i)
 	{
+		// printf("phdr[%d]", i);
 		// Find the .text Segment (containing .text section)
 		if (TEXT_SEGMENT_FOUND  == 0 &&
 			phdr[i].p_type  == PT_LOAD &&
 			phdr[i].p_flags == (PF_R | PF_X))
 		{
+			// printf("text seg");
 			TEXT_SEGMENT_FOUND = 1;
 			// get the offset of the .text segment for encryption
 			textoff = phdr[i].p_offset;
@@ -165,12 +180,16 @@ Elf64_Off	PaddingSizeFinder(void *ptr)
 			OffsetPadder = phdr[i].p_offset + phdr[i].p_filesz;
 		}
 		// Find next segment after .text Segment and calculate padding size
-		else if (OffsetPadder != 0)
+		else if (TEXT_SEGMENT_FOUND)
 		{
+			// printf("aftertext seg\n");
 			textafter = phdr[i].p_offset;
+			if (!textoff)
+				printf(BOLDRED"<o> "RESET YELLOW"textafter is down, doesnt sound good\n"RESET);
 			// Return padding_size
 			return (phdr[i].p_offset - parasite_offset);
 		}
+		// printf("\n");
 	}
 
 	return 0;
