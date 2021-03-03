@@ -143,6 +143,5 @@ int		encryptor(char *ptr, off_t size)
 	j = -1;
 	for (off_t i = textoff; i < textend; i++)
 		ptr[i] ^= truekey[12 - (++j % 8)]; // key from [12] to [5]
-
 	return (0);
 }
