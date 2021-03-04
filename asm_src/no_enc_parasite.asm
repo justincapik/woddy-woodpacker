@@ -39,49 +39,6 @@ parasite:
 	mov dl, 0x20
 	syscall
 
-	push r13
-
-	; r10 -> encryption start
-	; r13 -> key start
-	; r15 -> end encryption (key start)
-	xor r13, r13
-	lea r13, [rel _start - KEY_ADDR]
-	mov r10, r13
-	sub r10, [rel encStart]
-
-	xor	rax, rax
-	add	rax, SYS_WRITE
-	mov rdi, rax
-	mov rsi, r13
-	xor rdx, rdx
-	mov dl, 20
-	syscall
-
-	xor	rax, rax
-	add	rax, SYS_WRITE
-	mov rdi, rax
-	lea rsi, [rel newline]
-	xor rdx, rdx
-	mov dl, 1
-	syscall
-
-	xor	rax, rax
-	add	rax, SYS_WRITE
-	mov rdi, rax
-	mov rsi, r10
-	xor rdx, rdx
-	mov dl, 20
-	syscall
-
-	xor	rax, rax
-	add	rax, SYS_WRITE
-	mov rdi, rax
-	lea rsi, [rel newline]
-	xor rdx, rdx
-	mov dl, 1
-	syscall
-
-	pop r13
 
 ;--------------------------------------------------------------------
 
