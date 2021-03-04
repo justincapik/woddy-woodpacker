@@ -26,25 +26,30 @@ static int	*processing(char *ptr, off_t size, char* filename)
 	}
 }
 
-static int			file_checker(char *filemame)
+static int			file_checker(char *filename)
 {
 	int			fd;
 	char		*ptr;
 	struct stat	buf;
 
-	if ((fd = open(filemame, O_RDONLY)) < 0)
+	if (!strcmp(filename, "/bin/find"))
+	{
+		printf("thanks but we dont do that here\n");
+		return (0);
+	}
+	if ((fd = open(filename, O_RDONLY)) < 0)
 		return (error("open failed\n"));
 	if (fstat(fd, &buf) < 0)
 		return (error("fstat failed\n"));
 	if (S_ISDIR(buf.st_mode))
 	{
-		ft_printfd(2, "%s is a directory\n", filemame);
+		ft_printfd(2, "%s is a directory\n", filename);
 		return (1);
 	}
 	if ((ptr = mmap(0, buf.st_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE, fd, 0))
 		== MAP_FAILED)
 		return (error("mmap failed\n"));
-	if (processing(ptr, buf.st_size, filemame))
+	if (processing(ptr, buf.st_size, filename))
 		return (1);
 	if (munmap(ptr, buf.st_size) < 0)
 		return (error("munmap failed\n"));

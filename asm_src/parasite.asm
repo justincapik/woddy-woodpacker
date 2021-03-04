@@ -19,7 +19,7 @@ _start:
 	push rdi
 
 	jmp	parasite
-	message:	db	"-x-x-x-x- \_<O>_<O>_/ -x-x-x-x-", 0xa
+	message:	db	"....WOODY....", 0xa
 	filepath:   db  "/proc/self/maps", 0x0
 	newline:	db 	0xa
 	debug:		db 	"another one" , 0xa
@@ -34,10 +34,9 @@ parasite:
 	xor	rax, rax					; Zero out RAX
 	add	rax, SYS_WRITE				; Syscall number of write() - 0x1
 	mov rdi, rax					; File descriptor - 0x1 (STDOUT)
-	lea rsi, [rel message]			; Addresses the label relative to RIP (Instruction Pointer), i.e. 
-									; dynamically identifying the address of the 'message' label.
+	lea rsi, [rel message]			; Addresses the label relative to RIP (Instruction Pointer)
 	xor rdx, rdx
-	mov dl, 0x20					; message size = 30 bytes
+	mov dl, 14					; message size = 30 bytes
 	syscall
 
 ; .text is xor crypted, using a xor on .text mem to uncrypt it
